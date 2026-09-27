@@ -9,6 +9,9 @@
 /.github/ISSUE_TEMPLATE/*
 !/.github/ISSUE_TEMPLATE/*.yml
 !/README.md
+!/assets/
+/assets/*
+!/assets/mod-icon.png
 !/requirements-dev.txt
 !/src/
 /src/*

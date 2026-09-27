@@ -78,7 +78,7 @@ Development automation is opt-in through the local `debug.enabled` marker. Resea
 
 ## Public source hygiene
 
-Git uses an allowlist of source, offline tests, build tools, documentation, three static reference fixtures, and the licensed decoder. Local research, notes, release drafts, screenshots, logs, saves, game dumps, caches, backups, archives and other vendor checkouts are excluded. New public files must be deliberately added to the allowlist; do not force-add local artifacts.
+Git uses an allowlist of source, offline tests, build tools, documentation, the mod-manager icon, three static reference fixtures, and the licensed decoder. Local research, notes, release drafts, screenshots, logs, saves, game dumps, caches, backups, archives and other vendor checkouts are excluded. New public files must be deliberately added to the allowlist; do not force-add local artifacts.
 
 ## GitLab CI and release builds
 

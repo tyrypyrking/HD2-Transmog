@@ -89,6 +89,8 @@ def main():
     with zipfile.ZipFile(package) as z:
         files={n:z.read(n) for n in z.namelist()}
     manifest=json.loads(files['manifest.json'])
+    manifest['IconPath']='mod-icon.png'
+    files['mod-icon.png']=(ROOT/'assets/mod-icon.png').read_bytes()
     manifest['Description']=DESCRIPTION
     manifest['Options'][0]['Description']=DESCRIPTION
     files['manifest.json']=(json.dumps(manifest,indent=2)+'\n').encode()

@@ -17,10 +17,12 @@ def test_installable_package_and_luajit_discovery_entry():
     first=package.read_bytes()
     with zipfile.ZipFile(package) as z:
         assert set(z.namelist()) == {
-            'manifest.json','README.txt','THIRD-PARTY-LICENSES.txt','Addon/9ba626afa44a3aa3.patch_0',
+            'manifest.json','README.txt','THIRD-PARTY-LICENSES.txt','mod-icon.png','Addon/9ba626afa44a3aa3.patch_0',
             'Addon/9ba626afa44a3aa3.patch_0.stream','Addon/9ba626afa44a3aa3.patch_0.gpu_resources'}
         assert b'0.1.2-debug' in z.read('README.txt')
         manifest=json.loads(z.read('manifest.json'))
+        assert manifest['IconPath']=='mod-icon.png'
+        assert z.read(manifest['IconPath'])==(ROOT/'assets/mod-icon.png').read_bytes()
         assert manifest['Guid']=='46b51e90-d243-457a-ae92-8d7e6875c0ea'
         assert manifest['Options'][0]['Include']==['Addon']
         archive=z.read('Addon/9ba626afa44a3aa3.patch_0')
