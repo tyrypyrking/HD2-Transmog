@@ -1,0 +1,58 @@
+"""Native request/cache reader, with synthetic memory and real catalog IDs."""
+from pathlib import Path
+import subprocess
+ROOT=Path(__file__).resolve().parents[1]
+PRELUDE=r'''local P=dofile('src/player_customization_probe.lua')
+local data=dofile('src/catalog_data.lua')
+local memory={}
+local function word(n)local out={};for i=1,4 do out[i]=string.char(n%256);n=math.floor(n/256)end;return table.concat(out)end
+local function pointer(n)return word(n)..word(0)end
+local function put(at,s)for i=1,#s do memory[at+i-1]=s:sub(i,i)end end
+local function read(at,n)local out={};for i=1,n do if not memory[at+i-1]then return nil end;out[i]=memory[at+i-1]end;return table.concat(out)end
+local armor=0x1f9bfa78;local helmet,cape
+for id,kit in pairs(data.kits)do if kit.category==1 then helmet=id elseif kit.category==2 then cape=id end end
+local manager,players,player,entries,info=0x20000,0x30000,0x40000,0x50000,0x60000
+put(0x10000,pointer(manager));put(0x10008,pointer(players))
+put(players+0x84,word(1)..word(1));put(players+0xe8,pointer(player));put(player+8,word(0xfffffffd))
+put(manager+0x930,pointer(entries)..word(8)..word(0xffffffff)..word(0xfffffffb))
+-- Large uint32 hash product reduced modulo eight equals seven.
+put(entries+56,word(0xfffffffd)..word(2));put(manager+0x948+16,pointer(info));put(info+16,word(77))
+local request=word(0)..word(helmet)..word(cape)..word(armor)
+put(manager+0xa7c+128,request)
+put(manager+0x96c+136,request..string.rep('\0',40)..word(0)..word(data.kits[armor].passive_enum)..word(0))
+local valid=true
+local bridge={read=read,verify=function()return valid end,armor_catalog=0x10000,players=0x10008}
+local observer=P.new(bridge,data)
+'''
+def run(code):
+ p=subprocess.run(['luajit','-'],input=PRELUDE+code,text=True,cwd=ROOT,capture_output=True,timeout=10)
+ assert p.returncode==0,p.stdout+p.stderr
+
+def test_request_cache_snapshot_is_fresh_and_semantic():
+ run(r'''
+local a=assert(observer:sample());assert(a.slot==2 and a.local_player_id==0xfffffffd and a.settled)
+assert(a.request_armor_id=='armor:1f9bfa78' and a.cache_passive_enum==data.kits[armor].passive_enum)
+local b=assert(observer:sample());assert(a.session_key==b.session_key and a.verify())
+local text=P.format(a);assert(not text:find('address')and not text:find('0x'))
+put(manager+0xa7c+128+12,word(0x61b31723));assert(not a.verify())
+local c=assert(observer:sample());assert(not c.settled and c.request_armor_id=='armor:61b31723')
+valid=false;assert(not c.verify()and not observer:sample())
+''')
+
+def test_invalid_local_identity_or_layout_fails_closed():
+ run(r'''
+put(manager+0x938,word(7));assert(not observer:sample())
+put(manager+0x938,word(8));put(players+0x88,word(2));assert(not observer:sample())
+put(players+0x88,word(1));put(manager+0x96c+136+0x3c,word(0xffffffff));assert(not observer:sample())
+put(manager+0x96c+136+0x3c,word(data.kits[armor].passive_enum));put(info+16,word(0x7fff));assert(not observer:sample())
+''')
+
+def test_session_key_changes_when_entity_identity_changes_and_race_rejects():
+ run(r'''
+local a=assert(observer:sample());put(info+16,word(78));local b=assert(observer:sample())
+assert(a.session_key~=b.session_key and not a.verify())
+local reads=0;bridge.read=function(at,n)
+ local value=read(at,n);if at==player+8 then reads=reads+1;if reads==2 then return word(22)end end;return value
+end
+assert(not observer:sample())
+''')

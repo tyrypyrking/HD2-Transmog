@@ -1,0 +1,2353 @@
+{
+  "schema_version": 1,
+  "language": "en-US",
+  "source": {
+    "catalog_commit": "bf0ce329db3cf0043994eb717ea86433c303cb36",
+    "catalog_json_sha256": "c7818d9776861c06dbbea729bcebf51226c8390d288c2f9db789be63ee99763d",
+    "installed_build_id": "25480438",
+    "localization_source": "installed vanilla strings resources",
+    "localization_aliases": {
+      "2103330367": 4122605483,
+      "4116525182": 3900081651,
+      "3453442104": 849272024,
+      "520075084": 1950924479,
+      "2571849420": 1673011979,
+      "240929492": 4201560668,
+      "1862408368": 1002465957,
+      "1291824105": 588663789
+    },
+    "localization_resources": [
+      {
+        "resource": "7c7587b563f10985",
+        "archive": "9ba626afa44a3aa3",
+        "version": 1,
+        "sha256": "c2d747de73575c6d1ea5ad2baf15ac15a8cd8d777050f959c9b2467698725534",
+        "size": 165833,
+        "count": 3246
+      }
+    ]
+  },
+  "capabilities": {
+    "live_effects_verified": false,
+    "native_ui_ratings_verified": false,
+    "ownership_source": false
+  },
+  "kits": {
+    "armor:01c2a674": {
+      "name": "AD-26 Bleeding Edge",
+      "name_available": true,
+      "name_loc": 1114234159,
+      "name_source_loc": 1114234159,
+      "passive_variant_id": "passive:9f87c84eacbdadbdc915551253812b37"
+    },
+    "armor:05e56ee5": {
+      "name": "SR-24 Street Scout",
+      "name_available": true,
+      "name_loc": 3708144977,
+      "name_source_loc": 3708144977,
+      "passive_variant_id": "passive:1b58072e922c7172cd6dbb0afeb8a42a"
+    },
+    "armor:076d9aad": {
+      "name": "FS-05 Marksman",
+      "name_available": true,
+      "name_loc": 3070458044,
+      "name_source_loc": 3070458044,
+      "passive_variant_id": "passive:5535d463160bbdf23c472a447fc666a6"
+    },
+    "armor:09b08ec4": {
+      "name": "BP-32 Jackboot",
+      "name_available": true,
+      "name_loc": 1850940314,
+      "name_source_loc": 1850940314,
+      "passive_variant_id": "passive:98ce380de45140dad0b4c134e358741b"
+    },
+    "armor:0a18c237": {
+      "name": "AD-49 Apollonian",
+      "name_available": true,
+      "name_loc": 3764445519,
+      "name_source_loc": 3764445519,
+      "passive_variant_id": "passive:9f87c84eacbdadbdc915551253812b37"
+    },
+    "armor:0ade6719": {
+      "name": "DS-191 Scorpion",
+      "name_available": true,
+      "name_loc": 2736926040,
+      "name_source_loc": 2736926040,
+      "passive_variant_id": "passive:b255327e798696cd27edff9c609e6dfe"
+    },
+    "armor:0b5cd386": {
+      "name": "CW-36 Winter Warrior",
+      "name_available": true,
+      "name_loc": 1617048491,
+      "name_source_loc": 1617048491,
+      "passive_variant_id": "passive:4e923042354f5274d1337a3fe8617496"
+    },
+    "armor:100a5dcd": {
+      "name": "AF-91 Field Chemist",
+      "name_available": true,
+      "name_loc": 1471503938,
+      "name_source_loc": 1471503938,
+      "passive_variant_id": "passive:783357c3f094d788e59e1d3de474f9ba"
+    },
+    "armor:1348e7c7": {
+      "name": "Unlocalized armor 1348e7c7",
+      "name_available": false,
+      "name_loc": 888058938,
+      "name_source_loc": null,
+      "passive_variant_id": "passive:e627e7e024ce87f167843cc55824510e"
+    },
+    "armor:135c4274": {
+      "name": "Unlocalized armor 135c4274",
+      "name_available": false,
+      "name_loc": 750446850,
+      "name_source_loc": null,
+      "passive_variant_id": "passive:efa5b3573272cbfb1b6b40196a0009d4"
+    },
+    "armor:1369b95b": {
+      "name": "B-01 Tactical",
+      "name_available": true,
+      "name_loc": 2020958113,
+      "name_source_loc": 2020958113,
+      "passive_variant_id": "passive:efa5b3573272cbfb1b6b40196a0009d4"
+    },
+    "armor:14209e3a": {
+      "name": "SC-37 Legionnaire",
+      "name_available": true,
+      "name_loc": 3707804375,
+      "name_source_loc": 3707804375,
+      "passive_variant_id": "passive:4e923042354f5274d1337a3fe8617496"
+    },
+    "armor:16e1b9d3": {
+      "name": "A-9 Helljumper",
+      "name_available": true,
+      "name_loc": 1456963500,
+      "name_source_loc": 1456963500,
+      "passive_variant_id": "passive:44e60578752c28938cef4c87d23ef68c"
+    },
+    "armor:16eeb860": {
+      "name": "GS-17 Frontier Marshal",
+      "name_available": true,
+      "name_loc": 3911487404,
+      "name_source_loc": 3911487404,
+      "passive_variant_id": "passive:c2cb5c980a1011c2c06a6cc3b7191c80"
+    },
+    "armor:1b8329ab": {
+      "name": "KDM-73 Dragoon",
+      "name_available": true,
+      "name_loc": 2707764633,
+      "name_source_loc": 2707764633,
+      "passive_variant_id": "passive:c3168314ba9cd7c39d616c26bbbe31bb"
+    },
+    "armor:1c089a28": {
+      "name": "TR-40 Gold Eagle",
+      "name_available": true,
+      "name_loc": 662852761,
+      "name_source_loc": 662852761,
+      "passive_variant_id": "passive:b10a1dace6861c912197838a556efa1a"
+    },
+    "armor:1c6c05fa": {
+      "name": "CM-09 Bonesnapper",
+      "name_available": true,
+      "name_loc": 526077306,
+      "name_source_loc": 526077306,
+      "passive_variant_id": "passive:20aea041568deda5cad3d270fdcb5e99"
+    },
+    "armor:1d0e3431": {
+      "name": "B-01 Tactical",
+      "name_available": true,
+      "name_loc": 2020958113,
+      "name_source_loc": 2020958113,
+      "passive_variant_id": "passive:efa5b3573272cbfb1b6b40196a0009d4"
+    },
+    "armor:1d20d6ee": {
+      "name": "B-08 Light Gunner",
+      "name_available": true,
+      "name_loc": 2129711499,
+      "name_source_loc": 2129711499,
+      "passive_variant_id": "passive:b10a1dace6861c912197838a556efa1a"
+    },
+    "armor:1d60fc90": {
+      "name": "SC-30 Trailblazer Scout",
+      "name_available": true,
+      "name_loc": 3161943025,
+      "name_source_loc": 3161943025,
+      "passive_variant_id": "passive:d826b878f6b7193da06063526bd94f90"
+    },
+    "armor:1e28f118": {
+      "name": "KDM-763 Pacesetter",
+      "name_available": true,
+      "name_loc": 2006721785,
+      "name_source_loc": 2006721785,
+      "passive_variant_id": "passive:c3168314ba9cd7c39d616c26bbbe31bb"
+    },
+    "armor:1f9bfa78": {
+      "name": "FS-37 Ravager",
+      "name_available": true,
+      "name_loc": 2721885102,
+      "name_source_loc": 2721885102,
+      "passive_variant_id": "passive:e627e7e024ce87f167843cc55824510e"
+    },
+    "armor:20a85cc1": {
+      "name": "FS-38 Eradicator",
+      "name_available": true,
+      "name_loc": 4037789759,
+      "name_source_loc": 4037789759,
+      "passive_variant_id": "passive:5535d463160bbdf23c472a447fc666a6"
+    },
+    "armor:223a3b4b": {
+      "name": "I-44 Salamander",
+      "name_available": true,
+      "name_loc": 2663165311,
+      "name_source_loc": 2663165311,
+      "passive_variant_id": "passive:4df30ee43a240ea4cdbb910f1e9449ce"
+    },
+    "armor:23d0e15c": {
+      "name": "PH-56 Jaguar",
+      "name_available": true,
+      "name_loc": 3839210593,
+      "name_source_loc": 3839210593,
+      "passive_variant_id": "passive:2cc1759604ffcb8c849b1f70b2d8ea9f"
+    },
+    "armor:242702a5": {
+      "name": "CPH-26 COMMANDANT",
+      "name_available": true,
+      "name_loc": 2103330367,
+      "name_source_loc": 4122605483,
+      "passive_variant_id": "passive:b59dbd8087b2b7de7f4b671f3af0b0f7"
+    },
+    "armor:24e3d6ba": {
+      "name": "EX-03 Prototype 3",
+      "name_available": true,
+      "name_loc": 300356390,
+      "name_source_loc": 300356390,
+      "passive_variant_id": "passive:7bd21e845b3b758d0c6de80e2a5ab908"
+    },
+    "armor:250fd6c1": {
+      "name": "B-01 Tactical",
+      "name_available": true,
+      "name_loc": 2020958113,
+      "name_source_loc": 2020958113,
+      "passive_variant_id": "passive:efa5b3573272cbfb1b6b40196a0009d4"
+    },
+    "armor:2521d401": {
+      "name": "UF-84 Doubt Killer",
+      "name_available": true,
+      "name_loc": 1750576249,
+      "name_source_loc": 1750576249,
+      "passive_variant_id": "passive:13f8bcb0edaeb0a594cdd82c39751258"
+    },
+    "armor:26bf31fe": {
+      "name": "CE-74 Breaker",
+      "name_available": true,
+      "name_loc": 1410048178,
+      "name_source_loc": 1410048178,
+      "passive_variant_id": "passive:e627e7e024ce87f167843cc55824510e"
+    },
+    "armor:26d572a4": {
+      "name": "FS-23 Battle Master",
+      "name_available": true,
+      "name_loc": 1379640417,
+      "name_source_loc": 1379640417,
+      "passive_variant_id": "passive:5535d463160bbdf23c472a447fc666a6"
+    },
+    "armor:2d1dd830": {
+      "name": "I-09 Heatseeker",
+      "name_available": true,
+      "name_loc": 737227869,
+      "name_source_loc": 737227869,
+      "passive_variant_id": "passive:4df30ee43a240ea4cdbb910f1e9449ce"
+    },
+    "armor:2e706db8": {
+      "name": "O-2 Heavy Operator",
+      "name_available": true,
+      "name_loc": 1511917268,
+      "name_source_loc": 1511917268,
+      "passive_variant_id": "passive:aedd8ccad8d6089df2cdfab6e427032e"
+    },
+    "armor:30e54b57": {
+      "name": "RE-2310 Honorary Guard",
+      "name_available": true,
+      "name_loc": 2852294319,
+      "name_source_loc": 2852294319,
+      "passive_variant_id": "passive:fefdac7118cc54fddd48db24987c2a52"
+    },
+    "armor:3412f5e4": {
+      "name": "BFM-77 REFORMER",
+      "name_available": true,
+      "name_loc": 4116525182,
+      "name_source_loc": 3900081651,
+      "passive_variant_id": "passive:1c97d61e8a4062a3d6b01eb616607fe1"
+    },
+    "armor:38aa207d": {
+      "name": "CM-14 Physician",
+      "name_available": true,
+      "name_loc": 2402119974,
+      "name_source_loc": 2402119974,
+      "passive_variant_id": "passive:20aea041568deda5cad3d270fdcb5e99"
+    },
+    "armor:3c3ebaf0": {
+      "name": "SA-32 Dynamo",
+      "name_available": true,
+      "name_loc": 282273878,
+      "name_source_loc": 282273878,
+      "passive_variant_id": "passive:4e923042354f5274d1337a3fe8617496"
+    },
+    "armor:3f1bec1a": {
+      "name": "DP-00 Tactical",
+      "name_available": true,
+      "name_loc": 2211494876,
+      "name_source_loc": 2211494876,
+      "passive_variant_id": "passive:f96521c38edde27b71c43650cd911235"
+    },
+    "armor:407ab98a": {
+      "name": "GS-11 Democracy's Deputy",
+      "name_available": true,
+      "name_loc": 598279086,
+      "name_source_loc": 598279086,
+      "passive_variant_id": "passive:c2cb5c980a1011c2c06a6cc3b7191c80"
+    },
+    "armor:40c6635c": {
+      "name": "BP-20 Correct Officer",
+      "name_available": true,
+      "name_loc": 759723416,
+      "name_source_loc": 759723416,
+      "passive_variant_id": "passive:98ce380de45140dad0b4c134e358741b"
+    },
+    "armor:4a545f06": {
+      "name": "DS-42 Federation's Blade",
+      "name_available": true,
+      "name_loc": 3811816814,
+      "name_source_loc": 3811816814,
+      "passive_variant_id": "passive:b255327e798696cd27edff9c609e6dfe"
+    },
+    "armor:4dd749c6": {
+      "name": "RS-100 SANCTIONER",
+      "name_available": true,
+      "name_loc": 3453442104,
+      "name_source_loc": 849272024,
+      "passive_variant_id": "passive:578e69bd07de06a240461e8698be819d"
+    },
+    "armor:4f7fb2bd": {
+      "name": "B-01 Tactical",
+      "name_available": true,
+      "name_loc": 2020958113,
+      "name_source_loc": 2020958113,
+      "passive_variant_id": "passive:b10a1dace6861c912197838a556efa1a"
+    },
+    "armor:5096bce9": {
+      "name": "SR-64 Cinderblock",
+      "name_available": true,
+      "name_loc": 1512362192,
+      "name_source_loc": 1512362192,
+      "passive_variant_id": "passive:1b58072e922c7172cd6dbb0afeb8a42a"
+    },
+    "armor:537e8e45": {
+      "name": "FS-61 Dreadnought",
+      "name_available": true,
+      "name_loc": 1892629368,
+      "name_source_loc": 1892629368,
+      "passive_variant_id": "passive:4e923042354f5274d1337a3fe8617496"
+    },
+    "armor:55fd699b": {
+      "name": "AC-2 Obedient",
+      "name_available": true,
+      "name_loc": 3898500608,
+      "name_source_loc": 3898500608,
+      "passive_variant_id": "passive:5f336820fff44fcd9b4e3eba6d33ed5e"
+    },
+    "armor:5662c173": {
+      "name": "I-102 Draconaught",
+      "name_available": true,
+      "name_loc": 3970966164,
+      "name_source_loc": 3970966164,
+      "passive_variant_id": "passive:4df30ee43a240ea4cdbb910f1e9449ce"
+    },
+    "armor:58dbdacd": {
+      "name": "FS-05 Marksman",
+      "name_available": true,
+      "name_loc": 3070458044,
+      "name_source_loc": 3070458044,
+      "passive_variant_id": "passive:5535d463160bbdf23c472a447fc666a6"
+    },
+    "armor:5a17d6d6": {
+      "name": "CE-07 Demolition Specialist",
+      "name_available": true,
+      "name_loc": 2909424452,
+      "name_source_loc": 2909424452,
+      "passive_variant_id": "passive:e627e7e024ce87f167843cc55824510e"
+    },
+    "armor:5bb4bbb0": {
+      "name": "SC-34 Infiltrator",
+      "name_available": true,
+      "name_loc": 1155286393,
+      "name_source_loc": 1155286393,
+      "passive_variant_id": "passive:d826b878f6b7193da06063526bd94f90"
+    },
+    "armor:5cc09255": {
+      "name": "AF-50 Noxious Ranger",
+      "name_available": true,
+      "name_loc": 2210667779,
+      "name_source_loc": 2210667779,
+      "passive_variant_id": "passive:783357c3f094d788e59e1d3de474f9ba"
+    },
+    "armor:5d0d8002": {
+      "name": "TG-8 Sharpshooter",
+      "name_available": true,
+      "name_loc": 165114243,
+      "name_source_loc": 165114243,
+      "passive_variant_id": "passive:4543eb94463748891fb8a63560868876"
+    },
+    "armor:5f075dc5": {
+      "name": "CPG-48 SAPPER",
+      "name_available": true,
+      "name_loc": 520075084,
+      "name_source_loc": 1950924479,
+      "passive_variant_id": "passive:a0c5955440ac421fc4c758955e0062f2"
+    },
+    "armor:61b31723": {
+      "name": "B-01 Tactical",
+      "name_available": true,
+      "name_loc": 2020958113,
+      "name_source_loc": 2020958113,
+      "passive_variant_id": "passive:b10a1dace6861c912197838a556efa1a"
+    },
+    "armor:6351a9aa": {
+      "name": "B-01 Tactical",
+      "name_available": true,
+      "name_loc": 2020958113,
+      "name_source_loc": 2020958113,
+      "passive_variant_id": "passive:b10a1dace6861c912197838a556efa1a"
+    },
+    "armor:674671a0": {
+      "name": "CE-64 Grenadier",
+      "name_available": true,
+      "name_loc": 3662120282,
+      "name_source_loc": 3662120282,
+      "passive_variant_id": "passive:e627e7e024ce87f167843cc55824510e"
+    },
+    "armor:69bc2d4a": {
+      "name": "CW-22 Kodiak",
+      "name_available": true,
+      "name_loc": 3516021318,
+      "name_source_loc": 3516021318,
+      "passive_variant_id": "passive:5535d463160bbdf23c472a447fc666a6"
+    },
+    "armor:6b619174": {
+      "name": "Unlocalized armor 6b619174",
+      "name_available": false,
+      "name_loc": 3647584042,
+      "name_source_loc": null,
+      "passive_variant_id": "passive:efa5b3573272cbfb1b6b40196a0009d4"
+    },
+    "armor:6d30f386": {
+      "name": "B-01 Tactical",
+      "name_available": true,
+      "name_loc": 2020958113,
+      "name_source_loc": 2020958113,
+      "passive_variant_id": "passive:b10a1dace6861c912197838a556efa1a"
+    },
+    "armor:708451e9": {
+      "name": "B-01 Tactical",
+      "name_available": true,
+      "name_loc": 2020958113,
+      "name_source_loc": 2020958113,
+      "passive_variant_id": "passive:efa5b3573272cbfb1b6b40196a0009d4"
+    },
+    "armor:72b472a7": {
+      "name": "PH-9 Predator",
+      "name_available": true,
+      "name_loc": 1644828869,
+      "name_source_loc": 1644828869,
+      "passive_variant_id": "passive:2cc1759604ffcb8c849b1f70b2d8ea9f"
+    },
+    "armor:732693a1": {
+      "name": "Unlocalized armor 732693a1",
+      "name_available": false,
+      "name_loc": 1574384083,
+      "name_source_loc": null,
+      "passive_variant_id": "passive:efa5b3573272cbfb1b6b40196a0009d4"
+    },
+    "armor:7346edc6": {
+      "name": "TR-62 Knight",
+      "name_available": true,
+      "name_loc": 1136470459,
+      "name_source_loc": 1136470459,
+      "passive_variant_id": "passive:4e923042354f5274d1337a3fe8617496"
+    },
+    "armor:756159e4": {
+      "name": "SC-30 Trailblazer Scout",
+      "name_available": true,
+      "name_loc": 3161943025,
+      "name_source_loc": 3161943025,
+      "passive_variant_id": "passive:d826b878f6b7193da06063526bd94f90"
+    },
+    "armor:77947add": {
+      "name": "FS-11 Executioner",
+      "name_available": true,
+      "name_loc": 2902624853,
+      "name_source_loc": 2902624853,
+      "passive_variant_id": "passive:5535d463160bbdf23c472a447fc666a6"
+    },
+    "armor:7a07031f": {
+      "name": "CM-10 Clinician",
+      "name_available": true,
+      "name_loc": 2778148389,
+      "name_source_loc": 2778148389,
+      "passive_variant_id": "passive:20aea041568deda5cad3d270fdcb5e99"
+    },
+    "armor:7d96d0c6": {
+      "name": "CM-09 Bonesnapper",
+      "name_available": true,
+      "name_loc": 526077306,
+      "name_source_loc": 526077306,
+      "passive_variant_id": "passive:efa5b3573272cbfb1b6b40196a0009d4"
+    },
+    "armor:7edf6505": {
+      "name": "CE-27 Ground Breaker",
+      "name_available": true,
+      "name_loc": 614297745,
+      "name_source_loc": 614297745,
+      "passive_variant_id": "passive:e627e7e024ce87f167843cc55824510e"
+    },
+    "armor:803276ce": {
+      "name": "B-24 Enforcer",
+      "name_available": true,
+      "name_loc": 1050431518,
+      "name_source_loc": 1050431518,
+      "passive_variant_id": "passive:5535d463160bbdf23c472a447fc666a6"
+    },
+    "armor:8a957897": {
+      "name": "TR-7 Ambassador of the Brand",
+      "name_available": true,
+      "name_loc": 3713235989,
+      "name_source_loc": 3713235989,
+      "passive_variant_id": "passive:b10a1dace6861c912197838a556efa1a"
+    },
+    "armor:8b9ed77d": {
+      "name": "B-24 Enforcer",
+      "name_available": true,
+      "name_loc": 1050431518,
+      "name_source_loc": 1050431518,
+      "passive_variant_id": "passive:20aea041568deda5cad3d270fdcb5e99"
+    },
+    "armor:8bd85dd2": {
+      "name": "FS-34 Exterminator",
+      "name_available": true,
+      "name_loc": 4267611838,
+      "name_source_loc": 4267611838,
+      "passive_variant_id": "passive:5535d463160bbdf23c472a447fc666a6"
+    },
+    "armor:8c6ae37c": {
+      "name": "BFM-16 TANKER",
+      "name_available": true,
+      "name_loc": 2571849420,
+      "name_source_loc": 1673011979,
+      "passive_variant_id": "passive:1c97d61e8a4062a3d6b01eb616607fe1"
+    },
+    "armor:8c83c789": {
+      "name": "I-92 Fire Fighter",
+      "name_available": true,
+      "name_loc": 674183024,
+      "name_source_loc": 674183024,
+      "passive_variant_id": "passive:4df30ee43a240ea4cdbb910f1e9449ce"
+    },
+    "armor:940716d6": {
+      "name": "TR-9 Cavalier of Democracy",
+      "name_available": true,
+      "name_loc": 2146393453,
+      "name_source_loc": 2146393453,
+      "passive_variant_id": "passive:f96521c38edde27b71c43650cd911235"
+    },
+    "armor:95903adf": {
+      "name": "CM-17 Butcher",
+      "name_available": true,
+      "name_loc": 260795141,
+      "name_source_loc": 260795141,
+      "passive_variant_id": "passive:20aea041568deda5cad3d270fdcb5e99"
+    },
+    "armor:97cf0a8a": {
+      "name": "CE-81 Juggernaut",
+      "name_available": true,
+      "name_loc": 2907005557,
+      "name_source_loc": 2907005557,
+      "passive_variant_id": "passive:e627e7e024ce87f167843cc55824510e"
+    },
+    "armor:98e86082": {
+      "name": "RS-6 Fiend Destroyer",
+      "name_available": true,
+      "name_loc": 942247207,
+      "name_source_loc": 942247207,
+      "passive_variant_id": "passive:68106a251c82336ded37be587491249f"
+    },
+    "armor:9bc153c0": {
+      "name": "Unlocalized armor 9bc153c0",
+      "name_available": false,
+      "name_loc": 3789777975,
+      "name_source_loc": null,
+      "passive_variant_id": "passive:efa5b3573272cbfb1b6b40196a0009d4"
+    },
+    "armor:9c0bbe91": {
+      "name": "CPR-80 Bulwark",
+      "name_available": true,
+      "name_loc": 3899068957,
+      "name_source_loc": 3899068957,
+      "passive_variant_id": "passive:f273f170899e9769497b94709e76548b"
+    },
+    "armor:9f212504": {
+      "name": "Unlocalized armor 9f212504",
+      "name_available": false,
+      "name_loc": 1665445207,
+      "name_source_loc": null,
+      "passive_variant_id": "passive:e627e7e024ce87f167843cc55824510e"
+    },
+    "armor:9f73133e": {
+      "name": "TR-117 Alpha Commander",
+      "name_available": true,
+      "name_loc": 2301784568,
+      "name_source_loc": 2301784568,
+      "passive_variant_id": "passive:20aea041568deda5cad3d270fdcb5e99"
+    },
+    "armor:9fa96490": {
+      "name": "IE-12 Righteous",
+      "name_available": true,
+      "name_loc": 1659520367,
+      "name_source_loc": 1659520367,
+      "passive_variant_id": "passive:3608481c9f760bdcc09e4c4c3db2081a"
+    },
+    "armor:a45385cd": {
+      "name": "TG-122 Demo-Trooper",
+      "name_available": true,
+      "name_loc": 3893766986,
+      "name_source_loc": 3893766986,
+      "passive_variant_id": "passive:4543eb94463748891fb8a63560868876"
+    },
+    "armor:a574d33d": {
+      "name": "Unlocalized armor a574d33d",
+      "name_available": false,
+      "name_loc": 2128353970,
+      "name_source_loc": null,
+      "passive_variant_id": "passive:efa5b3573272cbfb1b6b40196a0009d4"
+    },
+    "armor:a9a71fe7": {
+      "name": "DP-8 Mountain-Scaled",
+      "name_available": true,
+      "name_loc": 2036077300,
+      "name_source_loc": 2036077300,
+      "passive_variant_id": "passive:1b58072e922c7172cd6dbb0afeb8a42a"
+    },
+    "armor:aa32b384": {
+      "name": "EX-16 Prototype 16",
+      "name_available": true,
+      "name_loc": 1226988442,
+      "name_source_loc": 1226988442,
+      "passive_variant_id": "passive:7bd21e845b3b758d0c6de80e2a5ab908"
+    },
+    "armor:ac0adecd": {
+      "name": "B-24 Enforcer",
+      "name_available": true,
+      "name_loc": 1050431518,
+      "name_source_loc": 1050431518,
+      "passive_variant_id": "passive:5535d463160bbdf23c472a447fc666a6"
+    },
+    "armor:ac4235b3": {
+      "name": "AC-1 Dutiful",
+      "name_available": true,
+      "name_loc": 3331509342,
+      "name_source_loc": 3331509342,
+      "passive_variant_id": "passive:5f336820fff44fcd9b4e3eba6d33ed5e"
+    },
+    "armor:ae5978b1": {
+      "name": "KDM-500 OUTRIDER",
+      "name_available": true,
+      "name_loc": 240929492,
+      "name_source_loc": 4201560668,
+      "passive_variant_id": "passive:c3168314ba9cd7c39d616c26bbbe31bb"
+    },
+    "armor:aed67d10": {
+      "name": "RS-89 SHADOW PARAGON",
+      "name_available": true,
+      "name_loc": 1862408368,
+      "name_source_loc": 1002465957,
+      "passive_variant_id": "passive:578e69bd07de06a240461e8698be819d"
+    },
+    "armor:b028b970": {
+      "name": "IE-3 Martyr",
+      "name_available": true,
+      "name_loc": 4118311236,
+      "name_source_loc": 4118311236,
+      "passive_variant_id": "passive:3608481c9f760bdcc09e4c4c3db2081a"
+    },
+    "armor:b08e0939": {
+      "name": "B-16 Battle-Scarred Veteran",
+      "name_available": true,
+      "name_loc": 1339661327,
+      "name_source_loc": 1339661327,
+      "passive_variant_id": "passive:efa5b3573272cbfb1b6b40196a0009d4"
+    },
+    "armor:b3550d20": {
+      "name": "UF-50 Bloodhound",
+      "name_available": true,
+      "name_loc": 2766414075,
+      "name_source_loc": 2766414075,
+      "passive_variant_id": "passive:13f8bcb0edaeb0a594cdd82c39751258"
+    },
+    "armor:b3deb5d9": {
+      "name": "CW-9 White Wolf",
+      "name_available": true,
+      "name_loc": 3260894616,
+      "name_source_loc": 3260894616,
+      "passive_variant_id": "passive:b10a1dace6861c912197838a556efa1a"
+    },
+    "armor:b482b460": {
+      "name": "GS-66 Lawmaker",
+      "name_available": true,
+      "name_loc": 1507566596,
+      "name_source_loc": 1507566596,
+      "passive_variant_id": "passive:c2cb5c980a1011c2c06a6cc3b7191c80"
+    },
+    "armor:b513fd54": {
+      "name": "DP-40 Hero of the Federation",
+      "name_available": true,
+      "name_loc": 3554596946,
+      "name_source_loc": 3554596946,
+      "passive_variant_id": "passive:f96521c38edde27b71c43650cd911235"
+    },
+    "armor:b661572a": {
+      "name": "UF-16 Inspector",
+      "name_available": true,
+      "name_loc": 454883555,
+      "name_source_loc": 454883555,
+      "passive_variant_id": "passive:13f8bcb0edaeb0a594cdd82c39751258"
+    },
+    "armor:b69df10d": {
+      "name": "SA-8 Ram",
+      "name_available": true,
+      "name_loc": 489706864,
+      "name_source_loc": 489706864,
+      "passive_variant_id": "passive:8f9172295612bef8fe2bf34089b9f5b3"
+    },
+    "armor:b92e1781": {
+      "name": "CW-4 Arctic Ranger",
+      "name_available": true,
+      "name_loc": 356014921,
+      "name_source_loc": 356014921,
+      "passive_variant_id": "passive:d826b878f6b7193da06063526bd94f90"
+    },
+    "armor:bc5cf836": {
+      "name": "O-44 BONDED PILOT",
+      "name_available": true,
+      "name_loc": 1291824105,
+      "name_source_loc": 588663789,
+      "passive_variant_id": "passive:aedd8ccad8d6089df2cdfab6e427032e"
+    },
+    "armor:c2a2375f": {
+      "name": "Unlocalized armor c2a2375f",
+      "name_available": false,
+      "name_loc": 4020419969,
+      "name_source_loc": null,
+      "passive_variant_id": "passive:efa5b3573272cbfb1b6b40196a0009d4"
+    },
+    "armor:c60c706d": {
+      "name": "DS-10 Big Game Hunter",
+      "name_available": true,
+      "name_loc": 2281091641,
+      "name_source_loc": 2281091641,
+      "passive_variant_id": "passive:b255327e798696cd27edff9c609e6dfe"
+    },
+    "armor:c71dbba4": {
+      "name": "RE-1861 Parade Commander",
+      "name_available": true,
+      "name_loc": 2725300846,
+      "name_source_loc": 2725300846,
+      "passive_variant_id": "passive:fefdac7118cc54fddd48db24987c2a52"
+    },
+    "armor:c7a5782f": {
+      "name": "SA-7 Headfirst",
+      "name_available": true,
+      "name_loc": 787710913,
+      "name_source_loc": 787710913,
+      "passive_variant_id": "passive:8f9172295612bef8fe2bf34089b9f5b3"
+    },
+    "armor:c9d2ad39": {
+      "name": "SA-04 Combat Technician",
+      "name_available": true,
+      "name_loc": 1825331623,
+      "name_source_loc": 1825331623,
+      "passive_variant_id": "passive:d826b878f6b7193da06063526bd94f90"
+    },
+    "armor:ca092176": {
+      "name": "RS-67 Null Cipher",
+      "name_available": true,
+      "name_loc": 3578495106,
+      "name_source_loc": 3578495106,
+      "passive_variant_id": "passive:578e69bd07de06a240461e8698be819d"
+    },
+    "armor:cb7e9736": {
+      "name": "B-22 Model Citizen",
+      "name_available": true,
+      "name_loc": 91112513,
+      "name_source_loc": 91112513,
+      "passive_variant_id": "passive:f96521c38edde27b71c43650cd911235"
+    },
+    "armor:d2c578e1": {
+      "name": "B-27 Fortified Commando",
+      "name_available": true,
+      "name_loc": 2574245188,
+      "name_source_loc": 2574245188,
+      "passive_variant_id": "passive:b10a1dace6861c912197838a556efa1a"
+    },
+    "armor:d3461392": {
+      "name": "FS-55 Devastator",
+      "name_available": true,
+      "name_loc": 941001616,
+      "name_source_loc": 941001616,
+      "passive_variant_id": "passive:5535d463160bbdf23c472a447fc666a6"
+    },
+    "armor:d52bb413": {
+      "name": "CM-21 Trench Paramedic",
+      "name_available": true,
+      "name_loc": 81991626,
+      "name_source_loc": 81991626,
+      "passive_variant_id": "passive:20aea041568deda5cad3d270fdcb5e99"
+    },
+    "armor:d59566d5": {
+      "name": "B-01 Tactical",
+      "name_available": true,
+      "name_loc": 2020958113,
+      "name_source_loc": 2020958113,
+      "passive_variant_id": "passive:efa5b3573272cbfb1b6b40196a0009d4"
+    },
+    "armor:d63ffdd3": {
+      "name": "SR-18 Roadblock",
+      "name_available": true,
+      "name_loc": 2016694799,
+      "name_source_loc": 2016694799,
+      "passive_variant_id": "passive:1b58072e922c7172cd6dbb0afeb8a42a"
+    },
+    "armor:d7b2fd5d": {
+      "name": "EX-00 Prototype X",
+      "name_available": true,
+      "name_loc": 72563834,
+      "name_source_loc": 72563834,
+      "passive_variant_id": "passive:7bd21e845b3b758d0c6de80e2a5ab908"
+    },
+    "armor:d879973a": {
+      "name": "A-35 Recon",
+      "name_available": true,
+      "name_loc": 3036570949,
+      "name_source_loc": 3036570949,
+      "passive_variant_id": "passive:44e60578752c28938cef4c87d23ef68c"
+    },
+    "armor:dae4a744": {
+      "name": "SA-25 Steel Trooper",
+      "name_available": true,
+      "name_loc": 504081326,
+      "name_source_loc": 504081326,
+      "passive_variant_id": "passive:4e923042354f5274d1337a3fe8617496"
+    },
+    "armor:dbc21a99": {
+      "name": "RS-40 Beast of Prey",
+      "name_available": true,
+      "name_loc": 913017115,
+      "name_source_loc": 913017115,
+      "passive_variant_id": "passive:68106a251c82336ded37be587491249f"
+    },
+    "armor:de631a28": {
+      "name": "PH-202 Twigsnapper",
+      "name_available": true,
+      "name_loc": 2032014327,
+      "name_source_loc": 2032014327,
+      "passive_variant_id": "passive:2cc1759604ffcb8c849b1f70b2d8ea9f"
+    },
+    "armor:dee800a8": {
+      "name": "CE-101 Guerilla Gorilla",
+      "name_available": true,
+      "name_loc": 2854330936,
+      "name_source_loc": 2854330936,
+      "passive_variant_id": "passive:e627e7e024ce87f167843cc55824510e"
+    },
+    "armor:e1d53693": {
+      "name": "IE-57 Hell-Bent",
+      "name_available": true,
+      "name_loc": 2429942127,
+      "name_source_loc": 2429942127,
+      "passive_variant_id": "passive:3608481c9f760bdcc09e4c4c3db2081a"
+    },
+    "armor:e3aaa79d": {
+      "name": "DP-11 Champion of the People",
+      "name_available": true,
+      "name_loc": 2740153811,
+      "name_source_loc": 2740153811,
+      "passive_variant_id": "passive:f96521c38edde27b71c43650cd911235"
+    },
+    "armor:e9add047": {
+      "name": "AF-02 Haz-Master",
+      "name_available": true,
+      "name_loc": 3199795572,
+      "name_source_loc": 3199795572,
+      "passive_variant_id": "passive:783357c3f094d788e59e1d3de474f9ba"
+    },
+    "armor:ec4638af": {
+      "name": "RS-20 Constrictor",
+      "name_available": true,
+      "name_loc": 543446303,
+      "name_source_loc": 543446303,
+      "passive_variant_id": "passive:68106a251c82336ded37be587491249f"
+    },
+    "armor:ecabadbf": {
+      "name": "FS-05 Marksman",
+      "name_available": true,
+      "name_loc": 3070458044,
+      "name_source_loc": 3070458044,
+      "passive_variant_id": "passive:5535d463160bbdf23c472a447fc666a6"
+    },
+    "armor:f2b7d3f5": {
+      "name": "SA-12 Servo-Assisted",
+      "name_available": true,
+      "name_loc": 1458358876,
+      "name_source_loc": 1458358876,
+      "passive_variant_id": "passive:4e923042354f5274d1337a3fe8617496"
+    },
+    "armor:f34064ac": {
+      "name": "CE-67 Titan",
+      "name_available": true,
+      "name_loc": 2014104199,
+      "name_source_loc": 2014104199,
+      "passive_variant_id": "passive:e627e7e024ce87f167843cc55824510e"
+    },
+    "armor:f4598295": {
+      "name": "BP-77 Grand Juror",
+      "name_available": true,
+      "name_loc": 1401822931,
+      "name_source_loc": 1401822931,
+      "passive_variant_id": "passive:98ce380de45140dad0b4c134e358741b"
+    },
+    "armor:f57d61ce": {
+      "name": "SC-15 Drone Master",
+      "name_available": true,
+      "name_loc": 2317508651,
+      "name_source_loc": 2317508651,
+      "passive_variant_id": "passive:e627e7e024ce87f167843cc55824510e"
+    },
+    "armor:f6303500": {
+      "name": "AF-52 Lockdown",
+      "name_available": true,
+      "name_loc": 291785917,
+      "name_source_loc": 291785917,
+      "passive_variant_id": "passive:783357c3f094d788e59e1d3de474f9ba"
+    },
+    "armor:f7e6f127": {
+      "name": "O-3 Free Spirit",
+      "name_available": true,
+      "name_loc": 2732014232,
+      "name_source_loc": 2732014232,
+      "passive_variant_id": "passive:aedd8ccad8d6089df2cdfab6e427032e"
+    },
+    "armor:f8b8cf9b": {
+      "name": "BFM-220 Ironclad",
+      "name_available": true,
+      "name_loc": 3897706997,
+      "name_source_loc": 3897706997,
+      "passive_variant_id": "passive:1c97d61e8a4062a3d6b01eb616607fe1"
+    },
+    "armor:f8fadb6c": {
+      "name": "AD-11 Livewire",
+      "name_available": true,
+      "name_loc": 3352749549,
+      "name_source_loc": 3352749549,
+      "passive_variant_id": "passive:9f87c84eacbdadbdc915551253812b37"
+    },
+    "armor:fb4b1254": {
+      "name": "CE-35 Trench Engineer",
+      "name_available": true,
+      "name_loc": 1265620134,
+      "name_source_loc": 1265620134,
+      "passive_variant_id": "passive:e627e7e024ce87f167843cc55824510e"
+    },
+    "armor:fd456de0": {
+      "name": "DP-53 Savior of the Free",
+      "name_available": true,
+      "name_loc": 4002297555,
+      "name_source_loc": 4002297555,
+      "passive_variant_id": "passive:f96521c38edde27b71c43650cd911235"
+    },
+    "armor:fde8f657": {
+      "name": "RE-824 Bearer of the Standard",
+      "name_available": true,
+      "name_loc": 3970181663,
+      "name_source_loc": 3970181663,
+      "passive_variant_id": "passive:fefdac7118cc54fddd48db24987c2a52"
+    }
+  },
+  "passives": {
+    "passive:efa5b3573272cbfb1b6b40196a0009d4": {
+      "name": "STANDARD ISSUE",
+      "name_loc": 1555196278,
+      "enum": 0,
+      "clauses": [
+        "No additional bonuses."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 0,
+          "type": 0,
+          "value": 0.0,
+          "description_loc": 2716085286,
+          "template": "No additional bonuses.",
+          "clause": "No additional bonuses.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:b10a1dace6861c912197838a556efa1a": {
+      "name": "EXTRA PADDING",
+      "name_loc": 4207037112,
+      "enum": 1,
+      "clauses": [
+        "Provides a higher armor rating."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 2947431239,
+          "type": 1,
+          "value": 1.0,
+          "description_loc": 1802981327,
+          "template": "Provides a higher armor rating.",
+          "clause": "Provides a higher armor rating.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:d826b878f6b7193da06063526bd94f90": {
+      "name": "SCOUT",
+      "name_loc": 3682222023,
+      "enum": 2,
+      "clauses": [
+        "Markers placed on the map will generate radar scans every 2 seconds.",
+        "Reduces range at which enemies can detect the wearer by 30%."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 564640356,
+          "type": 3,
+          "value": 2.0,
+          "description_loc": 2051882320,
+          "template": "Markers placed on the map will generate radar scans every #BONUS.",
+          "clause": "Markers placed on the map will generate radar scans every 2 seconds.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 351063573,
+          "type": 2,
+          "value": 0.699999988079071,
+          "description_loc": 3031268253,
+          "template": "Reduces range at which enemies can detect the wearer by #BONUS.",
+          "clause": "Reduces range at which enemies can detect the wearer by 30%.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:5535d463160bbdf23c472a447fc666a6": {
+      "name": "FORTIFIED",
+      "name_loc": 4176618764,
+      "enum": 3,
+      "clauses": [
+        "Further reduces recoil when crouching or prone by 30%.",
+        "Provides 50% resistance to explosive damage."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 3278452137,
+          "type": 2,
+          "value": 0.699999988079071,
+          "description_loc": 276558649,
+          "template": "Further reduces recoil when crouching or prone by #BONUS.",
+          "clause": "Further reduces recoil when crouching or prone by 30%.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 530108754,
+          "type": 2,
+          "value": 0.5,
+          "description_loc": 3110966073,
+          "template": "Provides #BONUS resistance to explosive damage.",
+          "clause": "Provides 50% resistance to explosive damage.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:7bd21e845b3b758d0c6de80e2a5ab908": {
+      "name": "ELECTRICAL CONDUIT",
+      "name_loc": 1724458231,
+      "enum": 5,
+      "clauses": [
+        "Provides 95% resistance to arc damage.",
+        "Additional effect has no game description (x 0.05)."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 1272920516,
+          "type": 2,
+          "value": 0.05000000074505806,
+          "description_loc": 980701584,
+          "template": "Provides #BONUS resistance to arc damage.",
+          "clause": "Provides 95% resistance to arc damage.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 2301880308,
+          "type": 2,
+          "value": 0.05000000074505806,
+          "description_loc": 0,
+          "template": null,
+          "clause": "Additional effect has no game description (x 0.05).",
+          "description_available": false
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:e627e7e024ce87f167843cc55824510e": {
+      "name": "ENGINEERING KIT",
+      "name_loc": 1160689016,
+      "enum": 6,
+      "clauses": [
+        "Further reduces recoil when crouching or prone by 30%.",
+        "Increases initial inventory and holding capacity of throwables by 2."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 3278452137,
+          "type": 2,
+          "value": 0.699999988079071,
+          "description_loc": 276558649,
+          "template": "Further reduces recoil when crouching or prone by #BONUS.",
+          "clause": "Further reduces recoil when crouching or prone by 30%.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 4143617574,
+          "type": 1,
+          "value": 2.0,
+          "description_loc": 4144979903,
+          "template": "Increases initial inventory and holding capacity of throwables by #BONUS.",
+          "clause": "Increases initial inventory and holding capacity of throwables by 2.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:20aea041568deda5cad3d270fdcb5e99": {
+      "name": "MED-KIT",
+      "name_loc": 1938376644,
+      "enum": 7,
+      "clauses": [
+        "Increases initial inventory and holding capacity of stims by +2.",
+        "Increases stim effect duration by 2 seconds."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 678818890,
+          "type": 1,
+          "value": 2.0,
+          "description_loc": 3264472874,
+          "template": "Increases initial inventory and holding capacity of stims by #SIGN#BONUS.",
+          "clause": "Increases initial inventory and holding capacity of stims by +2.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 2481657511,
+          "type": 3,
+          "value": 2.0,
+          "description_loc": 2230489000,
+          "template": "Increases stim effect duration by #BONUS.",
+          "clause": "Increases stim effect duration by 2 seconds.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:4e923042354f5274d1337a3fe8617496": {
+      "name": "SERVO-ASSISTED",
+      "name_loc": 142525292,
+      "enum": 8,
+      "clauses": [
+        "Increases throwing range by 30%.",
+        "Provides +50% limb health."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 650733985,
+          "type": 2,
+          "value": 1.2999999523162842,
+          "description_loc": 4083283407,
+          "template": "Increases throwing range by #BONUS.",
+          "clause": "Increases throwing range by 30%.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 2259262393,
+          "type": 2,
+          "value": 1.5,
+          "description_loc": 2398339361,
+          "template": "Provides #SIGN#BONUS limb health.",
+          "clause": "Provides +50% limb health.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:f96521c38edde27b71c43650cd911235": {
+      "name": "DEMOCRACY PROTECTS",
+      "name_loc": 1236709379,
+      "enum": 9,
+      "clauses": [
+        "50% chance to not die when taking lethal damage.",
+        "Prevents all damage from bleeding if chest hemorrhages."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 3414248709,
+          "type": 2,
+          "value": 1.5,
+          "description_loc": 3954717673,
+          "template": "#BONUS chance to not die when taking lethal damage.",
+          "clause": "50% chance to not die when taking lethal damage.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 2794008770,
+          "type": 2,
+          "value": 0.0,
+          "description_loc": 2277719467,
+          "template": "Prevents all damage from bleeding if chest hemorrhages.",
+          "clause": "Prevents all damage from bleeding if chest hemorrhages.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:fefdac7118cc54fddd48db24987c2a52": {
+      "name": "REINFORCED EPAULETTES",
+      "name_loc": 2813945735,
+      "enum": 10,
+      "clauses": [
+        "Increases reload speed of primary weapons by 30%.",
+        "Gives wearer a 50% chance to avoid grievous limb injury.",
+        "Increases melee damage by 20%."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 3427994401,
+          "type": 2,
+          "value": 1.2999999523162842,
+          "description_loc": 3205286516,
+          "template": "Increases reload speed of primary weapons by #BONUS.",
+          "clause": "Increases reload speed of primary weapons by 30%.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 4227156544,
+          "type": 2,
+          "value": 1.5,
+          "description_loc": 4177020126,
+          "template": "Gives wearer a #BONUS chance to avoid grievous limb injury.",
+          "clause": "Gives wearer a 50% chance to avoid grievous limb injury.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 626635789,
+          "type": 2,
+          "value": 1.2000000476837158,
+          "description_loc": 117522071,
+          "template": "Increases melee damage by #BONUS.",
+          "clause": "Increases melee damage by 20%.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [
+        {
+          "stat": 13,
+          "add_value": 0.0,
+          "mul_value": 1.2999999523162842
+        }
+      ],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:4df30ee43a240ea4cdbb910f1e9449ce": {
+      "name": "INFLAMMABLE",
+      "name_loc": 2332776870,
+      "enum": 11,
+      "clauses": [
+        "Provides 75% damage resistance to fire, allowing bearer to rest assured in their inflammability."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 1307742833,
+          "type": 2,
+          "value": 0.25,
+          "description_loc": 283424312,
+          "template": "Provides #BONUS damage resistance to fire, allowing bearer to rest assured in their inflammability.",
+          "clause": "Provides 75% damage resistance to fire, allowing bearer to rest assured in their inflammability.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:2cc1759604ffcb8c849b1f70b2d8ea9f": {
+      "name": "PEAK PHYSIQUE",
+      "name_loc": 467298293,
+      "enum": 12,
+      "clauses": [
+        "Increases melee damage by 40%.",
+        "Increases weapon ergonomics to reduce drag on weapon movement.",
+        "Additional effect has no game description (= 1)."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 626635789,
+          "type": 2,
+          "value": 1.399999976158142,
+          "description_loc": 117522071,
+          "template": "Increases melee damage by #BONUS.",
+          "clause": "Increases melee damage by 40%.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 3368859386,
+          "type": 1,
+          "value": 30.0,
+          "description_loc": 2356747919,
+          "template": "Increases weapon ergonomics to reduce drag on weapon movement.",
+          "clause": "Increases weapon ergonomics to reduce drag on weapon movement.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 234819138,
+          "type": 0,
+          "value": 1.0,
+          "description_loc": 0,
+          "template": null,
+          "clause": "Additional effect has no game description (= 1).",
+          "description_available": false
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:783357c3f094d788e59e1d3de474f9ba": {
+      "name": "ADVANCED FILTRATION",
+      "name_loc": 2096098484,
+      "enum": 13,
+      "clauses": [
+        "Provides 80% resistance to gas damage and effects."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 1855573221,
+          "type": 2,
+          "value": 0.20000000298023224,
+          "description_loc": 2613716205,
+          "template": "Provides #BONUS resistance to gas damage and effects.",
+          "clause": "Provides 80% resistance to gas damage and effects.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:13f8bcb0edaeb0a594cdd82c39751258": {
+      "name": "UNFLINCHING",
+      "name_loc": 3851872716,
+      "enum": 14,
+      "clauses": [
+        "Helps prevent Helldivers from flinching when hit.",
+        "Provides a higher armor rating.",
+        "Markers placed on the map will generate radar scans every 2 seconds."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 1936936295,
+          "type": 0,
+          "value": 0.0,
+          "description_loc": 158969120,
+          "template": "Helps prevent Helldivers from flinching when hit.",
+          "clause": "Helps prevent Helldivers from flinching when hit.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 2947431239,
+          "type": 1,
+          "value": 0.5,
+          "description_loc": 1802981327,
+          "template": "Provides a higher armor rating.",
+          "clause": "Provides a higher armor rating.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 564640356,
+          "type": 3,
+          "value": 2.0,
+          "description_loc": 2051882320,
+          "template": "Markers placed on the map will generate radar scans every #BONUS.",
+          "clause": "Markers placed on the map will generate radar scans every 2 seconds.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [
+        {
+          "stat": 11,
+          "add_value": 0.0,
+          "mul_value": 0.05000000074505806
+        }
+      ],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:5f336820fff44fcd9b4e3eba6d33ed5e": {
+      "name": "ACCLIMATED",
+      "name_loc": 3241737675,
+      "enum": 15,
+      "clauses": [
+        "Provides 50% resistance to fire, gas, acid, and electrical damage.",
+        "Additional effect has no game description (x 0.05)."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 3047489686,
+          "type": 2,
+          "value": 0.5,
+          "description_loc": 1113593779,
+          "template": "Provides #BONUS resistance to fire, gas, acid, and electrical damage.",
+          "clause": "Provides 50% resistance to fire, gas, acid, and electrical damage.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 2301880308,
+          "type": 2,
+          "value": 0.05000000074505806,
+          "description_loc": 0,
+          "template": null,
+          "clause": "Additional effect has no game description (x 0.05).",
+          "description_available": false
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:1b58072e922c7172cd6dbb0afeb8a42a": {
+      "name": "SIEGE-READY",
+      "name_loc": 1511760777,
+      "enum": 16,
+      "clauses": [
+        "Increases reload speed of primary weapons by 30%.",
+        "Increases ammo capacity of all weapons by 20%. Does not affect weapon backpacks."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 3427994401,
+          "type": 2,
+          "value": 1.2999999523162842,
+          "description_loc": 3205286516,
+          "template": "Increases reload speed of primary weapons by #BONUS.",
+          "clause": "Increases reload speed of primary weapons by 30%.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 868861715,
+          "type": 2,
+          "value": 1.2000000476837158,
+          "description_loc": 4096946733,
+          "template": "Increases ammo capacity of all weapons by #BONUS. Does not affect weapon backpacks.",
+          "clause": "Increases ammo capacity of all weapons by 20%. Does not affect weapon backpacks.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [
+        {
+          "stat": 13,
+          "add_value": 0.0,
+          "mul_value": 1.2999999523162842
+        },
+        {
+          "stat": 12,
+          "add_value": 0.0,
+          "mul_value": 1.2000000476837158
+        }
+      ],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:3608481c9f760bdcc09e4c4c3db2081a": {
+      "name": "INTEGRATED EXPLOSIVES",
+      "name_loc": 2043079863,
+      "enum": 17,
+      "clauses": [
+        "Armor explodes 1.5 seconds after the wearer dies.",
+        "Increases initial inventory and holding capacity of throwables by 2."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 1420202628,
+          "type": 3,
+          "value": 1.5,
+          "description_loc": 88479674,
+          "template": "Armor explodes #BONUS after the wearer dies.",
+          "clause": "Armor explodes 1.5 seconds after the wearer dies.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 4143617574,
+          "type": 1,
+          "value": 2.0,
+          "description_loc": 4144979903,
+          "template": "Increases initial inventory and holding capacity of throwables by #BONUS.",
+          "clause": "Increases initial inventory and holding capacity of throwables by 2.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 1682934331,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:c2cb5c980a1011c2c06a6cc3b7191c80": {
+      "name": "GUNSLINGER",
+      "name_loc": 306935634,
+      "enum": 18,
+      "clauses": [
+        "Increases sidearms reload speed by 40%.",
+        "Sidearm draw/holster speed increased by 50%.",
+        "Sidearm recoil reduced by 70%."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 3036184873,
+          "type": 2,
+          "value": 1.399999976158142,
+          "description_loc": 3466014766,
+          "template": "Increases sidearms reload speed by #BONUS.",
+          "clause": "Increases sidearms reload speed by 40%.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 2907867646,
+          "type": 2,
+          "value": 1.5,
+          "description_loc": 80576839,
+          "template": "Sidearm draw/holster speed increased by #BONUS.",
+          "clause": "Sidearm draw/holster speed increased by 50%.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 570646332,
+          "type": 2,
+          "value": 0.30000001192092896,
+          "description_loc": 1582813692,
+          "template": "Sidearm recoil reduced by #BONUS.",
+          "clause": "Sidearm recoil reduced by 70%.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [
+        {
+          "stat": 15,
+          "add_value": 0.0,
+          "mul_value": 1.600000023841858
+        },
+        {
+          "stat": 16,
+          "add_value": 0.0,
+          "mul_value": 1.5
+        },
+        {
+          "stat": 17,
+          "add_value": 0.0,
+          "mul_value": 0.30000001192092896
+        }
+      ],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:9f87c84eacbdadbdc915551253812b37": {
+      "name": "ADRENO-DEFIBRILLATOR",
+      "name_loc": 2198640368,
+      "enum": 19,
+      "clauses": [
+        "Provides one-time, short-lived resuscitation upon death, given that the Helldiver's body is still intact.",
+        "Increases stim effect duration by 2 seconds.",
+        "Provides 50% resistance to arc damage.",
+        "Additional effect has no game description (x 0.05)."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 0,
+          "type": 0,
+          "value": 0.0,
+          "description_loc": 1426645361,
+          "template": "Provides one-time, short-lived resuscitation upon death, given that the Helldiver's body is still intact.",
+          "clause": "Provides one-time, short-lived resuscitation upon death, given that the Helldiver's body is still intact.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 2481657511,
+          "type": 3,
+          "value": 2.0,
+          "description_loc": 2230489000,
+          "template": "Increases stim effect duration by #BONUS.",
+          "clause": "Increases stim effect duration by 2 seconds.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 1272920516,
+          "type": 2,
+          "value": 0.5,
+          "description_loc": 980701584,
+          "template": "Provides #BONUS resistance to arc damage.",
+          "clause": "Provides 50% resistance to arc damage.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 2301880308,
+          "type": 2,
+          "value": 0.05000000074505806,
+          "description_loc": 0,
+          "template": null,
+          "clause": "Additional effect has no game description (x 0.05).",
+          "description_available": false
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 1670092166,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:98ce380de45140dad0b4c134e358741b": {
+      "name": "BALLISTIC PADDING",
+      "name_loc": 2126903330,
+      "enum": 20,
+      "clauses": [
+        "Provides 25% resistance to chest damage.",
+        "Provides 25% resistance to explosive damage.",
+        "Prevents all damage from bleeding if chest hemorrhages."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 754642083,
+          "type": 2,
+          "value": 0.75,
+          "description_loc": 698831992,
+          "template": "Provides #BONUS resistance to chest damage.",
+          "clause": "Provides 25% resistance to chest damage.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 530108754,
+          "type": 2,
+          "value": 0.75,
+          "description_loc": 3110966073,
+          "template": "Provides #BONUS resistance to explosive damage.",
+          "clause": "Provides 25% resistance to explosive damage.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 2794008770,
+          "type": 2,
+          "value": 0.0,
+          "description_loc": 2277719467,
+          "template": "Prevents all damage from bleeding if chest hemorrhages.",
+          "clause": "Prevents all damage from bleeding if chest hemorrhages.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:b255327e798696cd27edff9c609e6dfe": {
+      "name": "DESERT STORMER",
+      "name_loc": 3224129712,
+      "enum": 21,
+      "clauses": [
+        "Provides 40% resistance to fire, gas, acid, and electrical damage.",
+        "Additional effect has no game description (x 0.06).",
+        "Increases throwing range by 20%."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 3047489686,
+          "type": 2,
+          "value": 0.6000000238418579,
+          "description_loc": 1113593779,
+          "template": "Provides #BONUS resistance to fire, gas, acid, and electrical damage.",
+          "clause": "Provides 40% resistance to fire, gas, acid, and electrical damage.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 2301880308,
+          "type": 2,
+          "value": 0.05999999865889549,
+          "description_loc": 0,
+          "template": null,
+          "clause": "Additional effect has no game description (x 0.06).",
+          "description_available": false
+        },
+        {
+          "modifier_id": 650733985,
+          "type": 2,
+          "value": 1.2000000476837158,
+          "description_loc": 4083283407,
+          "template": "Increases throwing range by #BONUS.",
+          "clause": "Increases throwing range by 20%.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:44e60578752c28938cef4c87d23ef68c": {
+      "name": "FEET FIRST",
+      "name_loc": 2458412307,
+      "enum": 31,
+      "clauses": [
+        "Wearer makes 50% less noise when moving.",
+        "Increases point-of-interest identification range by 30%.",
+        "Provides immunity to leg injuries."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 2945151250,
+          "type": 2,
+          "value": 0.5,
+          "description_loc": 2341805933,
+          "template": "Wearer makes #BONUS less noise when moving.",
+          "clause": "Wearer makes 50% less noise when moving.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 1126857107,
+          "type": 2,
+          "value": 1.2999999523162842,
+          "description_loc": 3297369983,
+          "template": "Increases point-of-interest identification range by #BONUS.",
+          "clause": "Increases point-of-interest identification range by 30%.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 3056290557,
+          "type": 0,
+          "value": 1.0,
+          "description_loc": 3559556444,
+          "template": "Provides immunity to leg injuries.",
+          "clause": "Provides immunity to leg injuries.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:578e69bd07de06a240461e8698be819d": {
+      "name": "REDUCED SIGNATURE",
+      "name_loc": 3160067283,
+      "enum": 32,
+      "clauses": [
+        "Wearer makes 50% less noise when moving.",
+        "Reduces range at which enemies can detect the wearer by 40%."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 2945151250,
+          "type": 2,
+          "value": 0.5,
+          "description_loc": 2341805933,
+          "template": "Wearer makes #BONUS less noise when moving.",
+          "clause": "Wearer makes 50% less noise when moving.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 351063573,
+          "type": 2,
+          "value": 0.6000000238418579,
+          "description_loc": 3031268253,
+          "template": "Reduces range at which enemies can detect the wearer by #BONUS.",
+          "clause": "Reduces range at which enemies can detect the wearer by 40%.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:68106a251c82336ded37be587491249f": {
+      "name": "ROCK-SOLID",
+      "name_loc": 232359449,
+      "enum": 33,
+      "clauses": [
+        "Increases melee damage by 40%.",
+        "Additional effect has no game description (= 1).",
+        "Bearer is more resistant to being knocked prone."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 626635789,
+          "type": 2,
+          "value": 1.399999976158142,
+          "description_loc": 117522071,
+          "template": "Increases melee damage by #BONUS.",
+          "clause": "Increases melee damage by 40%.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 234819138,
+          "type": 0,
+          "value": 1.0,
+          "description_loc": 0,
+          "template": null,
+          "clause": "Additional effect has no game description (= 1).",
+          "description_available": false
+        },
+        {
+          "modifier_id": 295944268,
+          "type": 2,
+          "value": 0.699999988079071,
+          "description_loc": 3828783979,
+          "template": "Bearer is more resistant to being knocked prone.",
+          "clause": "Bearer is more resistant to being knocked prone.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:8f9172295612bef8fe2bf34089b9f5b3": {
+      "name": "SUPPLEMENTAL ADRENALINE",
+      "name_loc": 828730877,
+      "enum": 34,
+      "clauses": [
+        "When the wearer takes damage, they regain some stamina.",
+        "Provides a higher armor rating."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 2710154678,
+          "type": 1,
+          "value": 2.0,
+          "description_loc": 416307315,
+          "template": "When the wearer takes damage, they regain some stamina.",
+          "clause": "When the wearer takes damage, they regain some stamina.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 2947431239,
+          "type": 1,
+          "value": 0.5,
+          "description_loc": 1802981327,
+          "template": "Provides a higher armor rating.",
+          "clause": "Provides a higher armor rating.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:f273f170899e9769497b94709e76548b": {
+      "name": "CONCUSSIVE PADDING, REINFORCED",
+      "name_loc": 3332727941,
+      "enum": 35,
+      "clauses": [
+        "Provides 50% resistance to explosive damage.",
+        "Provides a higher armor rating."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 530108754,
+          "type": 2,
+          "value": 0.5,
+          "description_loc": 3110966073,
+          "template": "Provides #BONUS resistance to explosive damage.",
+          "clause": "Provides 50% resistance to explosive damage.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 2947431239,
+          "type": 1,
+          "value": 0.6000000238418579,
+          "description_loc": 1802981327,
+          "template": "Provides a higher armor rating.",
+          "clause": "Provides a higher armor rating.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:a0c5955440ac421fc4c758955e0062f2": {
+      "name": "CONCUSSIVE PADDING, GRENADIER",
+      "name_loc": 141575155,
+      "enum": 36,
+      "clauses": [
+        "Provides 50% resistance to explosive damage.",
+        "Increases initial inventory and holding capacity of throwables by 2."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 530108754,
+          "type": 2,
+          "value": 0.5,
+          "description_loc": 3110966073,
+          "template": "Provides #BONUS resistance to explosive damage.",
+          "clause": "Provides 50% resistance to explosive damage.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 4143617574,
+          "type": 1,
+          "value": 2.0,
+          "description_loc": 4144979903,
+          "template": "Increases initial inventory and holding capacity of throwables by #BONUS.",
+          "clause": "Increases initial inventory and holding capacity of throwables by 2.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:b59dbd8087b2b7de7f4b671f3af0b0f7": {
+      "name": "CONCUSSIVE PADDING, HAZMAT",
+      "name_loc": 2634038544,
+      "enum": 37,
+      "clauses": [
+        "Provides 50% resistance to explosive damage.",
+        "Provides 25% resistance to gas damage and effects.",
+        "Sidearm recoil reduced by 30%."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 530108754,
+          "type": 2,
+          "value": 0.5,
+          "description_loc": 3110966073,
+          "template": "Provides #BONUS resistance to explosive damage.",
+          "clause": "Provides 50% resistance to explosive damage.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 1855573221,
+          "type": 2,
+          "value": 0.75,
+          "description_loc": 2613716205,
+          "template": "Provides #BONUS resistance to gas damage and effects.",
+          "clause": "Provides 25% resistance to gas damage and effects.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 570646332,
+          "type": 2,
+          "value": 0.699999988079071,
+          "description_loc": 1582813692,
+          "template": "Sidearm recoil reduced by #BONUS.",
+          "clause": "Sidearm recoil reduced by 30%.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [
+        {
+          "stat": 17,
+          "add_value": 0.0,
+          "mul_value": 0.699999988079071
+        }
+      ],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:aedd8ccad8d6089df2cdfab6e427032e": {
+      "name": "OXYGENATOR",
+      "name_loc": 1244403650,
+      "enum": 38,
+      "clauses": [
+        "Increases the wearer's walking and running speed.",
+        "Additional effect has no game description (x 1.1).",
+        "Increases the speed and duration of slides."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 3447301767,
+          "type": 2,
+          "value": 1.100000023841858,
+          "description_loc": 3847398060,
+          "template": "Increases the wearer's walking and running speed.",
+          "clause": "Increases the wearer's walking and running speed.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 4141249299,
+          "type": 2,
+          "value": 1.100000023841858,
+          "description_loc": 0,
+          "template": null,
+          "clause": "Additional effect has no game description (x 1.1).",
+          "description_available": false
+        },
+        {
+          "modifier_id": 1765326166,
+          "type": 0,
+          "value": 0.0,
+          "description_loc": 190436328,
+          "template": "Increases the speed and duration of slides.",
+          "clause": "Increases the speed and duration of slides.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:c3168314ba9cd7c39d616c26bbbe31bb": {
+      "name": "KINETIC DISPLACEMENT MITIGATION",
+      "name_loc": 205828823,
+      "enum": 39,
+      "clauses": [
+        "Provides 50% damage resistance to fire, allowing bearer to rest assured in their inflammability.",
+        "Gives wearer a 50% chance to avoid grievous limb injury.",
+        "Reduces damage taken from impact and collisions by 30%."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 1307742833,
+          "type": 2,
+          "value": 0.5,
+          "description_loc": 283424312,
+          "template": "Provides #BONUS damage resistance to fire, allowing bearer to rest assured in their inflammability.",
+          "clause": "Provides 50% damage resistance to fire, allowing bearer to rest assured in their inflammability.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 4227156544,
+          "type": 2,
+          "value": 1.5,
+          "description_loc": 4177020126,
+          "template": "Gives wearer a #BONUS chance to avoid grievous limb injury.",
+          "clause": "Gives wearer a 50% chance to avoid grievous limb injury.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 631608425,
+          "type": 2,
+          "value": 0.699999988079071,
+          "description_loc": 2852813790,
+          "template": "Reduces damage taken from impact and collisions by #BONUS.",
+          "clause": "Reduces damage taken from impact and collisions by 30%.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:1c97d61e8a4062a3d6b01eb616607fe1": {
+      "name": "BLUNT-FORCE MITIGATION",
+      "name_loc": 4229784342,
+      "enum": 40,
+      "clauses": [
+        "Bearer is more resistant to being knocked prone.",
+        "Reduces damage taken from impact and collisions by 30%.",
+        "Provides a higher armor rating."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 295944268,
+          "type": 2,
+          "value": 0.699999988079071,
+          "description_loc": 3828783979,
+          "template": "Bearer is more resistant to being knocked prone.",
+          "clause": "Bearer is more resistant to being knocked prone.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 631608425,
+          "type": 2,
+          "value": 0.699999988079071,
+          "description_loc": 2852813790,
+          "template": "Reduces damage taken from impact and collisions by #BONUS.",
+          "clause": "Reduces damage taken from impact and collisions by 30%.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 2947431239,
+          "type": 1,
+          "value": 0.5,
+          "description_loc": 1802981327,
+          "template": "Provides a higher armor rating.",
+          "clause": "Provides a higher armor rating.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    },
+    "passive:4543eb94463748891fb8a63560868876": {
+      "name": "TRUE GRIT",
+      "name_loc": 4225753900,
+      "enum": 41,
+      "clauses": [
+        "Increases reload speed of support weapons by 30%.",
+        "Slightly increases weapon ergonomics to reduce drag on weapon movement."
+      ],
+      "modifiers": [
+        {
+          "modifier_id": 905018348,
+          "type": 2,
+          "value": 1.2999999523162842,
+          "description_loc": 347262667,
+          "template": "Increases reload speed of support weapons by #BONUS.",
+          "clause": "Increases reload speed of support weapons by 30%.",
+          "description_available": true
+        },
+        {
+          "modifier_id": 3368859386,
+          "type": 1,
+          "value": 20.0,
+          "description_loc": 873843443,
+          "template": "Slightly increases weapon ergonomics to reduce drag on weapon movement.",
+          "clause": "Slightly increases weapon ergonomics to reduce drag on weapon movement.",
+          "description_available": true
+        }
+      ],
+      "stat_modifiers": [
+        {
+          "stat": 14,
+          "add_value": 0.0,
+          "mul_value": 1.2999999523162842
+        }
+      ],
+      "behavior_tag": 0,
+      "effect_source": "pinned reference values; live effects not verified"
+    }
+  },
+  "strings": {
+    "1114234159": "AD-26 Bleeding Edge",
+    "3708144977": "SR-24 Street Scout",
+    "3070458044": "FS-05 Marksman",
+    "1850940314": "BP-32 Jackboot",
+    "3764445519": "AD-49 Apollonian",
+    "2736926040": "DS-191 Scorpion",
+    "1617048491": "CW-36 Winter Warrior",
+    "1471503938": "AF-91 Field Chemist",
+    "2020958113": "B-01 Tactical",
+    "3707804375": "SC-37 Legionnaire",
+    "1456963500": "A-9 Helljumper",
+    "3911487404": "GS-17 Frontier Marshal",
+    "2707764633": "KDM-73 Dragoon",
+    "662852761": "TR-40 Gold Eagle",
+    "526077306": "CM-09 Bonesnapper",
+    "2129711499": "B-08 Light Gunner",
+    "3161943025": "SC-30 Trailblazer Scout",
+    "2006721785": "KDM-763 Pacesetter",
+    "2721885102": "FS-37 Ravager",
+    "4037789759": "FS-38 Eradicator",
+    "2663165311": "I-44 Salamander",
+    "3839210593": "PH-56 Jaguar",
+    "4122605483": "CPH-26 COMMANDANT",
+    "2103330367": "CPH-26 COMMANDANT",
+    "300356390": "EX-03 Prototype 3",
+    "1750576249": "UF-84 Doubt Killer",
+    "1410048178": "CE-74 Breaker",
+    "1379640417": "FS-23 Battle Master",
+    "737227869": "I-09 Heatseeker",
+    "1511917268": "O-2 Heavy Operator",
+    "2852294319": "RE-2310 Honorary Guard",
+    "3900081651": "BFM-77 REFORMER",
+    "4116525182": "BFM-77 REFORMER",
+    "2402119974": "CM-14 Physician",
+    "282273878": "SA-32 Dynamo",
+    "2211494876": "DP-00 Tactical",
+    "598279086": "GS-11 Democracy's Deputy",
+    "759723416": "BP-20 Correct Officer",
+    "3811816814": "DS-42 Federation's Blade",
+    "849272024": "RS-100 SANCTIONER",
+    "3453442104": "RS-100 SANCTIONER",
+    "1512362192": "SR-64 Cinderblock",
+    "1892629368": "FS-61 Dreadnought",
+    "3898500608": "AC-2 Obedient",
+    "3970966164": "I-102 Draconaught",
+    "2909424452": "CE-07 Demolition Specialist",
+    "1155286393": "SC-34 Infiltrator",
+    "2210667779": "AF-50 Noxious Ranger",
+    "165114243": "TG-8 Sharpshooter",
+    "1950924479": "CPG-48 SAPPER",
+    "520075084": "CPG-48 SAPPER",
+    "3662120282": "CE-64 Grenadier",
+    "3516021318": "CW-22 Kodiak",
+    "1644828869": "PH-9 Predator",
+    "1136470459": "TR-62 Knight",
+    "2902624853": "FS-11 Executioner",
+    "2778148389": "CM-10 Clinician",
+    "614297745": "CE-27 Ground Breaker",
+    "1050431518": "B-24 Enforcer",
+    "3713235989": "TR-7 Ambassador of the Brand",
+    "4267611838": "FS-34 Exterminator",
+    "1673011979": "BFM-16 TANKER",
+    "2571849420": "BFM-16 TANKER",
+    "674183024": "I-92 Fire Fighter",
+    "2146393453": "TR-9 Cavalier of Democracy",
+    "260795141": "CM-17 Butcher",
+    "2907005557": "CE-81 Juggernaut",
+    "942247207": "RS-6 Fiend Destroyer",
+    "3899068957": "CPR-80 Bulwark",
+    "2301784568": "TR-117 Alpha Commander",
+    "1659520367": "IE-12 Righteous",
+    "3893766986": "TG-122 Demo-Trooper",
+    "2036077300": "DP-8 Mountain-Scaled",
+    "1226988442": "EX-16 Prototype 16",
+    "3331509342": "AC-1 Dutiful",
+    "4201560668": "KDM-500 OUTRIDER",
+    "240929492": "KDM-500 OUTRIDER",
+    "1002465957": "RS-89 SHADOW PARAGON",
+    "1862408368": "RS-89 SHADOW PARAGON",
+    "4118311236": "IE-3 Martyr",
+    "1339661327": "B-16 Battle-Scarred Veteran",
+    "2766414075": "UF-50 Bloodhound",
+    "3260894616": "CW-9 White Wolf",
+    "1507566596": "GS-66 Lawmaker",
+    "3554596946": "DP-40 Hero of the Federation",
+    "454883555": "UF-16 Inspector",
+    "489706864": "SA-8 Ram",
+    "356014921": "CW-4 Arctic Ranger",
+    "588663789": "O-44 BONDED PILOT",
+    "1291824105": "O-44 BONDED PILOT",
+    "2281091641": "DS-10 Big Game Hunter",
+    "2725300846": "RE-1861 Parade Commander",
+    "787710913": "SA-7 Headfirst",
+    "1825331623": "SA-04 Combat Technician",
+    "3578495106": "RS-67 Null Cipher",
+    "91112513": "B-22 Model Citizen",
+    "2574245188": "B-27 Fortified Commando",
+    "941001616": "FS-55 Devastator",
+    "81991626": "CM-21 Trench Paramedic",
+    "2016694799": "SR-18 Roadblock",
+    "72563834": "EX-00 Prototype X",
+    "3036570949": "A-35 Recon",
+    "504081326": "SA-25 Steel Trooper",
+    "913017115": "RS-40 Beast of Prey",
+    "2032014327": "PH-202 Twigsnapper",
+    "2854330936": "CE-101 Guerilla Gorilla",
+    "2429942127": "IE-57 Hell-Bent",
+    "2740153811": "DP-11 Champion of the People",
+    "3199795572": "AF-02 Haz-Master",
+    "543446303": "RS-20 Constrictor",
+    "1458358876": "SA-12 Servo-Assisted",
+    "2014104199": "CE-67 Titan",
+    "1401822931": "BP-77 Grand Juror",
+    "2317508651": "SC-15 Drone Master",
+    "291785917": "AF-52 Lockdown",
+    "2732014232": "O-3 Free Spirit",
+    "3897706997": "BFM-220 Ironclad",
+    "3352749549": "AD-11 Livewire",
+    "1265620134": "CE-35 Trench Engineer",
+    "4002297555": "DP-53 Savior of the Free",
+    "3970181663": "RE-824 Bearer of the Standard",
+    "2716085286": "No additional bonuses.",
+    "1555196278": "STANDARD ISSUE",
+    "1802981327": "Provides a higher armor rating.",
+    "4207037112": "EXTRA PADDING",
+    "2051882320": "Markers placed on the map will generate radar scans every #BONUS.",
+    "3031268253": "Reduces range at which enemies can detect the wearer by #BONUS.",
+    "3682222023": "SCOUT",
+    "276558649": "Further reduces recoil when crouching or prone by #BONUS.",
+    "3110966073": "Provides #BONUS resistance to explosive damage.",
+    "4176618764": "FORTIFIED",
+    "980701584": "Provides #BONUS resistance to arc damage.",
+    "1724458231": "ELECTRICAL CONDUIT",
+    "4144979903": "Increases initial inventory and holding capacity of throwables by #BONUS.",
+    "1160689016": "ENGINEERING KIT",
+    "3264472874": "Increases initial inventory and holding capacity of stims by #SIGN#BONUS.",
+    "2230489000": "Increases stim effect duration by #BONUS.",
+    "1938376644": "MED-KIT",
+    "4083283407": "Increases throwing range by #BONUS.",
+    "2398339361": "Provides #SIGN#BONUS limb health.",
+    "142525292": "SERVO-ASSISTED",
+    "3954717673": "#BONUS chance to not die when taking lethal damage.",
+    "2277719467": "Prevents all damage from bleeding if chest hemorrhages.",
+    "1236709379": "DEMOCRACY PROTECTS",
+    "3205286516": "Increases reload speed of primary weapons by #BONUS.",
+    "4177020126": "Gives wearer a #BONUS chance to avoid grievous limb injury.",
+    "117522071": "Increases melee damage by #BONUS.",
+    "2813945735": "REINFORCED EPAULETTES",
+    "283424312": "Provides #BONUS damage resistance to fire, allowing bearer to rest assured in their inflammability.",
+    "2332776870": "INFLAMMABLE",
+    "2356747919": "Increases weapon ergonomics to reduce drag on weapon movement.",
+    "467298293": "PEAK PHYSIQUE",
+    "2613716205": "Provides #BONUS resistance to gas damage and effects.",
+    "2096098484": "ADVANCED FILTRATION",
+    "158969120": "Helps prevent Helldivers from flinching when hit.",
+    "3851872716": "UNFLINCHING",
+    "1113593779": "Provides #BONUS resistance to fire, gas, acid, and electrical damage.",
+    "3241737675": "ACCLIMATED",
+    "4096946733": "Increases ammo capacity of all weapons by #BONUS. Does not affect weapon backpacks.",
+    "1511760777": "SIEGE-READY",
+    "88479674": "Armor explodes #BONUS after the wearer dies.",
+    "2043079863": "INTEGRATED EXPLOSIVES",
+    "3466014766": "Increases sidearms reload speed by #BONUS.",
+    "80576839": "Sidearm draw/holster speed increased by #BONUS.",
+    "1582813692": "Sidearm recoil reduced by #BONUS.",
+    "306935634": "GUNSLINGER",
+    "1426645361": "Provides one-time, short-lived resuscitation upon death, given that the Helldiver's body is still intact.",
+    "2198640368": "ADRENO-DEFIBRILLATOR",
+    "698831992": "Provides #BONUS resistance to chest damage.",
+    "2126903330": "BALLISTIC PADDING",
+    "3224129712": "DESERT STORMER",
+    "2341805933": "Wearer makes #BONUS less noise when moving.",
+    "3297369983": "Increases point-of-interest identification range by #BONUS.",
+    "3559556444": "Provides immunity to leg injuries.",
+    "2458412307": "FEET FIRST",
+    "3160067283": "REDUCED SIGNATURE",
+    "3828783979": "Bearer is more resistant to being knocked prone.",
+    "232359449": "ROCK-SOLID",
+    "416307315": "When the wearer takes damage, they regain some stamina.",
+    "828730877": "SUPPLEMENTAL ADRENALINE",
+    "3332727941": "CONCUSSIVE PADDING, REINFORCED",
+    "141575155": "CONCUSSIVE PADDING, GRENADIER",
+    "2634038544": "CONCUSSIVE PADDING, HAZMAT",
+    "3847398060": "Increases the wearer's walking and running speed.",
+    "190436328": "Increases the speed and duration of slides.",
+    "1244403650": "OXYGENATOR",
+    "2852813790": "Reduces damage taken from impact and collisions by #BONUS.",
+    "205828823": "KINETIC DISPLACEMENT MITIGATION",
+    "4229784342": "BLUNT-FORCE MITIGATION",
+    "347262667": "Increases reload speed of support weapons by #BONUS.",
+    "873843443": "Slightly increases weapon ergonomics to reduce drag on weapon movement.",
+    "4225753900": "TRUE GRIT"
+  }
+}

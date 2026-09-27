@@ -1,0 +1,24 @@
+{
+  "schema": "hd2-transmog-appearances",
+  "api": 1,
+  "asset_abi": 1,
+  "id": "example/ceremonial",
+  "name": "Ceremonial Armor",
+  "version": "1.0.0",
+  "appearances": [
+    {
+      "id": "standard",
+      "name": "Ceremonial Armor",
+      "bodies": {
+        "lean": {
+          "package": "mods/hd2transmog/appearances/example/ceremonial/lean/package",
+          "units": ["mods/hd2transmog/appearances/example/ceremonial/lean/body"]
+        },
+        "muscle": {
+          "package": "mods/hd2transmog/appearances/example/ceremonial/muscle/package",
+          "units": ["mods/hd2transmog/appearances/example/ceremonial/muscle/body"]
+        }
+      }
+    }
+  ]
+}
