@@ -1,7 +1,8 @@
 -- Bundled after State, Platform, Adapter and Panel by tools/build.py.
 local MODULE = 'mods/hd2transmog/foundation'
+local UiLayout=UiLayout or require('src.ui_layout')
 if rawget(_G, 'HD2Transmog') then return rawget(_G, 'HD2Transmog') end
-local runtime = {version='0.1', status='starting', armor_writes=false,native_hitbox_source='root',automatic_custom_ui=true,profile={frames=0,tick=0,guard=0,draw=0}}
+local runtime = {version='0.1.1', status='starting', armor_writes=false,native_hitbox_source='root',automatic_custom_ui=true,profile={frames=0,tick=0,guard=0,draw=0}}
 rawset(_G, 'HD2Transmog', runtime)
 local loader = rawget(_G, 'CowboyBingusModLoader')
 local log
@@ -300,6 +301,9 @@ local ok, failure = pcall(function()
             end,
             preview_variant=preview_saved,
             refresh_widgets=function(request,label,index)return preview_saved(request,false,label,index,true)end,
+            equipped_feedback=function(request)
+                return grid_ui.bridge:equipment_feedback(request.appearance_id,catalog_result)
+            end,
             restore_focus=function(id,index)
                 if type(index)~='number'or not grid_ui.custom_cards or index<#grid_ui.custom_cards then
                     return nil,'The original armor card changed during Apply.'
@@ -320,8 +324,8 @@ local ok, failure = pcall(function()
     end
     function presentation.sample(sample,observed)
         if not(grid_ui.presentation and grid_ui.presentation.phase=='active'and observed and grid_ui.custom_cards)then return end
-        local w,h=engine.Gui.resolution();local scale=math.min(w/1920,h/1080)
-        local prefix={verified=true,clip={x=172*scale,y=h-976*scale,w=644*scale,h=794*scale},headers={},cells={},original_badges={}}
+        local w,h=engine.Gui.resolution()
+        local prefix={verified=true,clip=UiLayout.resolve(w,h).prefix,headers={},cells={},original_badges={}}
         if grid_ui.bridge.custom_headers then
             local ok,why=grid_ui.bridge:custom_headers(#grid_ui.custom_cards,grid_ui.selected_label~=nil)
             if not ok and grid_ui.header_error~=why then report('presentation.header',why);grid_ui.header_error=why end
@@ -362,14 +366,18 @@ local ok, failure = pcall(function()
             end_creation=function()
                 if grid_ui.rebuild_after_creator then grid_ui.rebuild_after_creator=false;grid_ui.custom_rows_dirty=true end
             end,
+            native_navigation_at=function(x,y)
+                if variant_session and variant_session:busy()then return false end
+                local w,h=engine.Gui.resolution()
+                return UiLayout.contains(UiLayout.resolve(w,h).navigation,x,y)
+            end,
             should_capture=function(input)
                 if grid_ui.rebuild_pending or grid_ui.custom_rows_dirty or grid_ui.navigation_pending then return true end
                 if variant_session and variant_session:view().native_override then return true end
                 if not(grid_ui.presentation and grid_ui.custom_cards and grid_ui.bridge)then return false end
                 if grid_ui.selected_label then return true end
-                local w,h=engine.Gui.resolution();local scale=math.min(w/1920,h/1080)
-                if input and input.down and input.x>=172*scale and input.x<816*scale
-                    and input.y>=h-976*scale and input.y<h-238*scale then return true end
+                local w,h=engine.Gui.resolution()
+                if input and input.down and UiLayout.contains(UiLayout.resolve(w,h).picker,input.x,input.y)then return true end
                 local index=grid_ui.bridge:selection_index()
                 if grid_ui.native_browse_index~=nil and index==grid_ui.native_browse_index then return false end
                 grid_ui.native_browse_index=nil
@@ -379,8 +387,8 @@ local ok, failure = pcall(function()
                 if not(grid_ui.presentation and grid_ui.custom_cards)then return nil end
                 local snapshot=grid_ui.bridge:snapshot(catalog_result)
                 if not(snapshot and snapshot.kind==4 and snapshot.identity_mapping_verified)then return nil end
-                local w,h=engine.Gui.resolution();local scale=math.min(w/1920,h/1080)
-                if x<172*scale or x>=816*scale or y<h-976*scale or y>=h-238*scale then return nil end
+                local w,h=engine.Gui.resolution()
+                if not UiLayout.contains(UiLayout.resolve(w,h).picker,x,y)then return nil end
                 for _,widget in ipairs(snapshot.widgets)do
                     local r=widget.root_viewport_rect
                     if widget.logical_index and widget.logical_index>=#grid_ui.custom_cards
@@ -621,11 +629,10 @@ local ok, failure = pcall(function()
                     end
                     for _,r in ipairs(state.regions)do region(r.action,r)end
                     if current.open and current.step==1 and grid_ui.bridge then
-                        local native=grid_ui.bridge:snapshot(catalog_result);local scale=math.min(w/1920,h/1080)
+                        local native=grid_ui.bridge:snapshot(catalog_result);local picker=UiLayout.resolve(w,h).picker
                         for _,widget in ipairs(native and native.widgets or {})do
                             local r=widget.root_viewport_rect
-                            if widget.bound_owned_kit_id and r and r.x>=172*scale and r.x+r.w<=816*scale
-                                and r.y>=h-976*scale and r.y+r.h<=h-238*scale then
+                            if widget.bound_owned_kit_id and r and UiLayout.contains_rect(picker,r)then
                                 region({type='select_look',id=widget.bound_owned_kit_id},r)
                             end
                         end

@@ -359,3 +359,28 @@ assert(not s:view().can_apply and not s:view().apply_pending)
 ready(10001,'New',other);assert(s:apply(10003))
 assert(s:busy()and not s:cancel_preview(),'navigation cancelled equipment work')
 ''')
+
+
+def test_native_feedback_follows_verified_cache_completion_once_and_is_not_preview():
+    run_lua(FIXTURE+r'''
+local feedback=0
+host.equipped_feedback=function(r)
+ assert(r.appearance_id==request.appearance_id and live.cache_armor_id==B and live.cache_passive==1)
+ feedback=feedback+1;return {status='native_equipped_feedback_verified'}
+end
+ready(0);assert(feedback==0);equip(10);assert(feedback==1)
+for i=20,30 do s:step(i)end
+assert(feedback==1 and #commits==1)
+''')
+
+
+def test_feedback_failure_does_not_replay_a_completed_equipment_transaction():
+    run_lua(FIXTURE+r'''
+local feedback=0
+host.equipped_feedback=function()feedback=feedback+1;error('feedback proof changed')end
+ready(0);equip(10)
+for i=20,30 do s:step(i)end
+assert(feedback==1 and #commits==1 and s.phase=='equipped'and not s:busy())
+local found=false;for _,line in ipairs(logs)do if line.key=='variant.feedback_failed'then found=true end end
+assert(found)
+''')

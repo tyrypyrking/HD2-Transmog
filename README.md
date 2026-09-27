@@ -1,6 +1,6 @@
 # HD2 Transmog
 
-Version **0.1** — combine an owned armor appearance, an owned base-stat profile, and an owned passive in Helldivers 2. Requires **Bingus Shared Loader v15+ / API 1**.
+Version **0.1.1** — combine an owned armor appearance, an owned base-stat profile, and an owned passive in Helldivers 2. Requires **Bingus Shared Loader v15+ / API 1**.
 
 ## Use
 
@@ -10,6 +10,10 @@ Version **0.1** — combine an owned armor appearance, an owned base-stat profil
 4. Select the saved card to preview it, then press the game's **Apply** button.
 
 Create saves a variant without equipping it. Saved cards use the native preview, stat bars, and passive descriptions. Their names identify the appearance and passive. Base-stat choices exclude the donor's passive bonus; the selected passive is applied separately.
+
+The creator, card clipping, and mouse Apply regions follow the native Armory's centered UI canvas on ultrawide displays. Layout and mouse-interaction regressions cover eight resolutions through 5120×1440, including live window resizing; live layout checks used 2400×1000 and 2400×675 (32:9). Keyboard/controller confirmation is not covered by this layout fix; use mouse Apply.
+
+After a verified armor change, Equip uses the native green equipped state. Equip audio still differs from the normal game sound and remains a known issue in 0.1.1. Helmet and Cape tab clicks remain available while browsing or creating; an armor change already in progress must finish before switching tabs.
 
 Pre-mission Equipment shows saved variants. Creation and removal are available in the ship Armory. **Remove variant** deletes a saved card without changing worn armor. Newly owned armor becomes available automatically; reopen Armor if the game's thumbnail list has not refreshed.
 
@@ -38,9 +42,9 @@ python3 -m pytest -q tests
 python3 tools/build.py
 ```
 
-Import `dist/HD2-Transmog-Foundation-0.1.zip` through Arsenal as the existing mod, enable it with the loader, and deploy while the game is closed. Let Arsenal assign patch numbers. Restart the game after installing an update.
+Import `dist/HD2-Transmog-Foundation-0.1.1.zip` through Arsenal as the existing mod, enable it with the loader, and deploy while the game is closed. Let Arsenal assign patch numbers. Restart the game after installing an update.
 
-The mod identity and saved-state format are unchanged by the version reset to 0.1. Existing saved variants are retained. State is stored under `%LOCALAPPDATA%/CowboyBingus/Helldivers2/Transmog`; diagnostics are in `STATUS.txt` and the sibling `Logs/HD2Transmog.log`. Corrupt or unreadable state is preserved rather than discarded.
+The mod identity and saved-state format are unchanged in 0.1.1. Existing saved variants are retained. State is stored under `%LOCALAPPDATA%/CowboyBingus/Helldivers2/Transmog`; diagnostics are in `STATUS.txt` and the sibling `Logs/HD2Transmog.log`. Corrupt or unreadable state is preserved rather than discarded.
 
 ## Compatibility and limits
 
@@ -60,7 +64,7 @@ Git uses an allowlist of source, offline tests, build tools, documentation, thre
 
 The pipeline runs the offline test suite on branch pushes, merge requests, and tags. When a merge request is open, its pipeline replaces the duplicate branch-push pipeline. Test results are uploaded as a [GitLab JUnit report](https://docs.gitlab.com/ci/testing/unit_test_reports/), including on test failure.
 
-After tests pass, `build-package` provides the installable ZIP and its SHA-256 file as downloadable job artifacts, retained for 30 days. A tag such as `v0.1` runs `release-build` instead and keeps those artifacts without an expiration. Release tags must match the runtime version in `src/main.lua`; both `0.1` and `v0.1` are accepted. The ZIP filename and bundled readme derive their version from that same runtime declaration. Update the package regression expectations and documentation when changing the version.
+After tests pass, `build-package` provides the installable ZIP and its SHA-256 file as downloadable job artifacts, retained for 30 days. A tag such as `v0.1.1` runs `release-build` instead and keeps those artifacts without an expiration. Release tags must match the runtime version in `src/main.lua`; both `0.1.1` and `v0.1.1` are accepted. The ZIP filename and bundled readme derive their version from that same runtime declaration. Update the package regression expectations and documentation when changing the version.
 
 The jobs need a Linux x86-64 Docker/Kubernetes runner with internet access to fetch the Python image, Debian/Python dependencies and checksum-verified packaging tools. They require no game installation, private captures, deployment credentials, or publishing token. Only the ZIP, checksum and test report are uploaded; CI does not publish the mod or create a GitLab release entry. Download the ZIP from the successful build job to publish it yourself.
 
@@ -69,8 +73,8 @@ To reproduce a tagged build locally:
 ```sh
 python3 tools/setup_dependencies.py
 python3 -m pytest -q tests
-python3 tools/build.py --release-tag v0.1
-(cd dist && sha256sum -c HD2-Transmog-Foundation-0.1.zip.sha256)
+python3 tools/build.py --release-tag v0.1.1
+(cd dist && sha256sum -c HD2-Transmog-Foundation-0.1.1.zip.sha256)
 ```
 
 Pipeline triggering follows GitLab's documented [workflow rules](https://docs.gitlab.com/ci/yaml/workflow/).

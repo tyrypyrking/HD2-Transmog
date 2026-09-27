@@ -26,6 +26,7 @@ function M.new(state_api,wizard_api,panel,host)
  local wizard=wizard_api.new(state_api,{allow_create=host.allow_create~=false})
  local self={};local previous,armed,release_latch,last_view=nil,nil,false,nil
  local selected_variant
+ local native_navigation=false
  local function consume()
   if type(host.consume_select)~='function'then return false end
   local ok,captured,reason=pcall(host.consume_select)
@@ -53,6 +54,20 @@ function M.new(state_api,wizard_api,panel,host)
  end
  function self:before(input)
   local view=self:view()
+  -- Native tabs own their entire mouse gesture, including release. A saved
+  -- selection's continuous confirmation guard must not swallow unrelated UI.
+  -- A drag begun on our controls never acquires navigation passthrough.
+  if native_navigation then
+   if released(input)then native_navigation=false;release_latch=false end
+   return true
+  end
+  if input and input.down==true and previous==false and not armed
+   and input.confirm_down~=true and input.select_down~=true
+   and type(host.native_navigation_at)=='function'
+   and host.native_navigation_at(input.x,input.y)==true then
+   native_navigation=true;release_latch=false
+   return true
+  end
   -- Ask the host before the native update, not after a draw has observed the
   -- press. It owns fresh native prefix bounds/selection-index proof. The hook
   -- is intentionally consulted even when mouse down is false: keyboard or
@@ -191,7 +206,7 @@ function M.new(state_api,wizard_api,panel,host)
  function self:leave()
   local domain,display=host.current()
   if domain and display then wizard:action(domain,display,{type='cancel'})end
-  panel:clear();previous=nil;armed=nil;last_view=nil;selected_variant=nil
+  panel:clear();previous=nil;armed=nil;last_view=nil;selected_variant=nil;native_navigation=false
   if host.end_creation then host.end_creation()end
  end
  function self:clear()panel:clear();previous=nil;armed=nil end

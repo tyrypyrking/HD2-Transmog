@@ -39,6 +39,7 @@ end
 local function bytes(h)return(h:gsub('%x%x',function(v)return string.char(tonumber(v,16))end))end
 local function ident(v)return string.format('armor:%08x',v)end
 local PATTERNS={
+ {name='detail_input',hex='48895c241048896c2418565741564883ec308b8104e00b004d8bf0',length=1955,optional=true},
  {name='header_text',hex='ba421e1862488d8d10010000e8000000008bc785ff741883e801740c83f8017513bb1cbbde21',wild={{13,16}},length=95,optional=true},
  {name='category_text',hex='418b85f02809004d8d879899090083f8ff',length=201,optional=true},
  {name='text_string',hex='40534883ec20488bd94881c110010000e84bd8ffff84c0745b8b93b8000000',length=121,optional=true},
@@ -90,6 +91,12 @@ local function native()
   return u32(raw,32)==4096 and ({[16]=true,[32]=true,[64]=true,[128]=true})[u32(raw,36)]==true
  end
  return {executable=executable,
+  button_state=function(at,widget,state)
+   ffi.cast(native_types.detail_passive,at)(ffi.cast('void*',widget),state);return true
+  end,
+  ui_sound=function(at,event)
+   ffi.cast(native_types.detail_passive,at)(nil,event);return true
+  end,
   text_template=function(at,widget,key)
    ffi.cast(native_types.detail_passive,at)(ffi.cast('void*',widget),key);return true
   end,
@@ -226,7 +233,7 @@ function M.new(bridge,report,backend)
    assert(inside(p.found,p.spec.length,true),'grid function proof outside code')
    local raw=read(base+p.found,p.spec.length)
    proofs[#proofs+1]={rva=p.found,bytes=raw};targets[p.spec.name]=base+p.found
-   local rows=decoder.decode(raw,p.found,256)
+   local rows=decoder.decode(raw,p.found,p.spec.name=='detail_input'and 512 or 256)
    if p.spec.name=='header_text'then
     assert(has(rows,'lea rcx, [rbp+0x110]')and has(rows,'mov edx, 0x341f7711')
      and has(rows,'mov edx, 0x15d8f2e2'),'header text binding differs')
@@ -272,6 +279,23 @@ function M.new(bridge,report,backend)
     end
     proofs[#proofs+1]={rva=setter,bytes=body}
     targets.deployment_commit={entry=base+setter,profile_global=global}
+   elseif p.spec.name=='detail_input'then
+    -- Resolve the UI audio dispatcher through the native button input edge.
+    -- Completion uses the button's separate completion event, not press/hold.
+    for _,op in ipairs({'lea rdi, [rbx+0x49f0]','mov byte [rbx+0x91a3], 0x1',
+     'mov edx, [rbx+0x91b0]'})do assert(has(rows,op),'native Equip input ABI differs: '..op)end
+    local sound
+    for i,row in ipairs(rows)do if row.op=='mov edx, [rbx+0x91b0]'then
+     local call=rows[i+1]and rows[i+1].op:match('^call 0x(%x+)$')
+     assert(call and not sound,'native Equip audio edge ambiguous');sound=tonumber(call,16)
+    end end
+    assert(sound and inside(sound,107,true),'native Equip audio unavailable')
+    local raw=read(base+sound,107);local body=decoder.decode(raw,sound,128)
+    for _,op in ipairs({'mov ebx, edx','mov rdx, [rax+0x288]','mov rcx, [rcx+0x10f8]',
+     'mov rsi, [rax+0x338]','call rdx','mov ecx, ebx','xor r9d, r9d','jmp rax'})do
+     assert(has(body,op),'native UI audio ABI differs: '..op)
+    end
+    proofs[#proofs+1]={rva=sound,bytes=raw};targets.equip_sound=base+sound
    elseif p.spec.name=='preview_notify'then
     for _,op in ipairs({'cmp dword [rcx+0x178c88], +0x01','mov rdi, rcx',
      'cmp byte [rcx+0x178c8e], 0x0','mov r9d, [rcx+0x92fbc]',
@@ -317,6 +341,23 @@ function M.new(bridge,report,backend)
     targets.preview_details=base+detail
     targets.detail_apply_hint=has(detail_rows,'lea rsi, [rbp+0x49f0]')
      and has(detail_rows,'lea edx, [r12+0x5]')and has(detail_rows,'mov rcx, rsi')
+    local feedback_ok,feedback=pcall(function()
+     local setter
+     for i,row in ipairs(detail_rows)do if row.op=='lea edx, [r12+0x5]'then
+      assert(detail_rows[i+1]and detail_rows[i+1].op=='mov rcx, rsi','Equip state receiver differs')
+      local call=detail_rows[i+2]and detail_rows[i+2].op:match('^call 0x(%x+)$')
+      assert(call and not setter,'Equip state setter ambiguous');setter=tonumber(call,16)
+     end end
+     assert(setter and inside(setter,281,true),'Equip state setter unavailable')
+     local raw=read(base+setter,281);local body=decoder.decode(raw,setter,192)
+     for _,op in ipairs({'mov edi, edx','mov rbx, rcx','mov [rbx+0x47b8], edx',
+      'mov [rcx+0x47b8], edi','cmp byte [rcx+0x47b2], 0x0','mov byte [rcx+0x47b3], 0x0',
+      'movss xmm2, [rbx+0x47b4]','mov edx, [rbx+0x47c8]','mov edx, [rbx+0x47c4]'})do
+      assert(has(body,op),'Equip state setter ABI differs: '..op)
+     end
+     proofs[#proofs+1]={rva=setter,bytes=raw};return base+setter
+    end)
+    if feedback_ok then targets.equip_state=feedback end
     local widgets_ok,widget_proof=pcall(function()
      local stats,passive
      for i,row in ipairs(detail_rows)do
@@ -1518,6 +1559,40 @@ function M.new(bridge,report,backend)
     stats_kit_id=stats_kit_id,stats_offer_id=offer,passive_offer_id=offer,
     passive_variant_id=passive_id,native_detail_view=true,
     temporary_passive_restored=true,appearance_data_unchanged=true,equipped=false,rendering_verified=false}
+  end)
+  if not ok then return nil,tostring(result)end;return result
+ end
+ -- Presentation only, after the coordinator has confirmed the armor/passive
+ -- cache. Do not re-enter native Apply or restart the appearance preview.
+ function self:equipment_feedback(id,catalog_result)
+  local ok,result=pcall(function()
+   assert(targets.equip_state and targets.equip_sound and code_current(),'native Equip feedback unavailable')
+   local calls=prepared()
+   assert(type(calls.button_state)=='function'and type(calls.ui_sound)=='function'
+    and calls.executable(targets.equip_state)and calls.executable(targets.equip_sound),'native Equip feedback backend unavailable')
+   local committed,why=self:commit_snapshot(catalog_result);assert(committed,why)
+   assert(committed.profile_armor_id==id and committed.controller_armor_id==id
+    and not committed.pending_nonarmor,'armor changed before Equip feedback')
+   local ctx=detail_context();local button=ctx.detail_widget+0x49f0
+   local kit=ident(u32(ctx.watch(ctx.detail_widget+0x20640+0xdc0,4),0))
+   assert(kit==id and catalog_result.verify_owned({id})==true,'selected armor changed before Equip feedback')
+   local state=ctx.watch(button+0x47b8,4);local event=u32(ctx.watch(button+0x47c8,4),0)
+   assert(event and event~=0 and event~=0xffffffff,'native Equip sound event unavailable')
+   local press=ctx.watch(button+0x47b2,6);local progress=f32(press,2)
+   assert(finite(progress),'native Equip progress unavailable')
+   local native_completion=press:byte(1)==0 and press:byte(2)~=0 and progress>=1
+   local profile=ctx.watch(ctx.profile_address,ctx.profile_size)
+   assert(ctx.unchanged()and self:verify_commit(committed)and code_current(),'Equip feedback context changed')
+   if u32(state,0)==6 then return {status='native_equipped_feedback_already_set',sound_played=false}end
+   assert(calls.button_state(targets.equip_state,button,6)~=false,'native equipped state rejected')
+   local current=detail_context()
+   assert(current.owner==ctx.owner and current.grid==ctx.grid and code_current()
+    and read(ctx.profile_address,ctx.profile_size)==profile and u32(read(button+0x47b8,4),0)==6,
+    'native equipped button readback differs')
+   if not native_completion then
+    assert(calls.ui_sound(targets.equip_sound,event)~=false,'native equip sound rejected')
+   end
+   return {status='native_equipped_feedback_verified',sound_played=true}
   end)
   if not ok then return nil,tostring(result)end;return result
  end

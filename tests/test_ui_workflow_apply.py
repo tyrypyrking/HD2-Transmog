@@ -188,3 +188,46 @@ assert(shown(apply_state.apply_notice) and #rects==0 and not shown('Saved varian
 assert(panel:hit(1800,130).type=='panel_background' and not panel:capture(1000,350))
 assert(flow:view().selected_variant==nil and native_equips==0 and persisted==0)
 ''')
+
+
+def test_native_tabs_receive_press_and_release_despite_selected_variant_capture():
+    run_lua(APPLY_FIXTURE+r'''
+host.native_navigation_at=function(x,y)return y>=900 end
+assert(flow:action{type='select_variant',label='Existing'});ready()
+assert(frame(500,950,false) and consumed)
+assert(frame(500,950,true) and not consumed)
+assert(frame(500,950,true) and not consumed)
+assert(frame(500,950,false) and not consumed)
+assert(applied==0)
+-- The next Apply still belongs to Transmog; passthrough is not sticky.
+assert(frame(1800,130,true) and consumed)
+assert(frame(1800,130,false) and applied==1)
+''')
+
+
+def test_drag_from_apply_to_tab_never_leaks_its_release_to_native_ui():
+    run_lua(APPLY_FIXTURE+r'''
+host.native_navigation_at=function(x,y)return y>=900 end
+assert(flow:action{type='select_variant',label='Existing'});ready()
+assert(frame(1800,130,true) and consumed)
+assert(frame(500,950,true) and consumed)
+assert(frame(500,950,false) and consumed)
+assert(applied==0 and native_equips==0)
+''')
+
+
+def test_tabs_work_in_creator_but_keyboard_and_busy_capture_remain_guarded():
+    run_lua(APPLY_FIXTURE+r'''
+local busy=false
+host.native_navigation_at=function(x,y)return not busy and y>=900 end
+assert(flow:action{type='open'})
+assert(frame(500,950,false));assert(frame(500,950,true) and not consumed)
+assert(frame(500,950,false) and not consumed)
+busy=true
+assert(frame(500,950,true) and consumed)
+assert(frame(500,950,false) and consumed)
+busy=false
+local input={x=500,y=950,down=true,confirm_down=true}
+consumed=false;assert(flow:before(input));assert(consumed)
+assert(applied==0 and persisted==0)
+''')

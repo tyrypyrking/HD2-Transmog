@@ -171,6 +171,11 @@ function M.new(host)
      if done then detail_binding=type(done)=='table'and done or nil
      else self.phase='preview_failed';notice=tostring(why);report('variant.widgets_failed',notice)end
     end
+    if self.phase=='equipped'and host.equipped_feedback then
+     local called,done,why=pcall(host.equipped_feedback,selected.request)
+     if called and done then report('variant.feedback',type(done)=='table'and done.status or 'complete')
+     else report('variant.feedback_failed',called and why or done)end
+    end
     report('variant.equipped',evidence.status)
    elseif phase=='failed'or phase=='blocked'or phase=='cancelled'then
     if evidence and evidence.commits==0 and evidence.target_prepared then

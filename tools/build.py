@@ -55,6 +55,7 @@ def bundle():
                                ('ArmorBaseStats','armor_base_stats.lua'),
                                ('PassiveIconGeometry','passive_icon_geometry.lua'),
                                ('PassiveIconDraw','passive_icon_draw.lua'),
+                               ('UiLayout','ui_layout.lua'),
                                ('WizardPanel','wizard_panel.lua'),
                                ('IconProbe','icon_probe.lua'),
                                ('UiWorkflow','ui_workflow.lua'),
@@ -68,7 +69,7 @@ def bundle():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--release-tag', help='Require a release tag matching the runtime version (for example v0.1).')
+    parser.add_argument('--release-tag', help='Require a release tag matching the runtime version (for example v0.1.1).')
     args = parser.parse_args()
     if args.release_tag is not None and args.release_tag not in (VERSION, 'v'+VERSION):
         parser.error(f'release tag must be {VERSION} or v{VERSION}; got {args.release_tag!r}')
@@ -104,7 +105,9 @@ def main():
         'Base-stat choices exclude donor passive bonuses and are sorted by armor rating.\n'
         'Create saves locally and does not equip or change the worn armor.\n'
         'Select a saved card to preview its look in the original stat/perk panels.\n'
-        'Press the native Apply button to equip the selected saved variant.\n'
+        'Click the native Apply button with the mouse to equip the selected saved variant.\n'
+        '0.1.1: centered ultrawide layout, aligned click regions, green Equipped feedback, and native Helmet/Cape tab clicks.\n'
+        'Known issues: equip audio differs from the normal game sound; keyboard/controller confirmation is not supported reliably.\n'
         'Apply keeps the old carrier intact until the native request/cache have switched away, then composes and equips.\n'
         'Catalog discovery warms before entry; bounded batch reads reduce section-loading work.\n'
         'Native cache confirmation is not proof of streaming completion or combat behavior. See README.md for validation limits.\n'

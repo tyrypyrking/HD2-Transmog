@@ -49,6 +49,7 @@
 -- these retained rectangles need no texture residency or material binding.
 
 local M = {}
+local Layout=UiLayout or require('src.ui_layout')
 local STAT_FIELDS = {'armor_rating', 'speed', 'stamina_regen'}
 local STAT_LABELS = {'ARMOR RATING', 'SPEED', 'STAMINA REGEN'}
 
@@ -194,7 +195,8 @@ function M.new(engine)
     local world
     for _,candidate in ipairs(A.worlds() or {}) do if candidate~=A.main_world() then world=candidate;break end end
     if not world then self:clear();return false end
-    local scale=math.min(width/1920,height/1080)
+    local base_layout=Layout.resolve(width,height,view.open)
+    local scale=base_layout.scale
     local native_details=not view.open and view.native_details==true
     local native_override=not view.open and view.native_override==true
     local native_override_id=native_override and type(view.native_override_id)=='string'
@@ -224,11 +226,11 @@ function M.new(engine)
     if not view.open and not section and not prefix and not selected_variant and not native_apply then self:clear();return true end
     local supplied=sample.wizard_layout or {}
     local layout={
-      header=supplied.header or {x=172*scale,y=height-238*scale,w=644*scale,h=56*scale},
-      picker=supplied.picker or {x=172*scale,y=height-976*scale,w=644*scale,h=738*scale},
-      review=supplied.review or {x=width-1060*scale,y=height-978*scale,w=1010*scale,h=440*scale},
-      apply=supplied.apply or {x=width-386*scale,y=height-976*scale,w=330*scale,h=58*scale},
-      footer=supplied.footer or {x=width-(view.open and 400 or 250)*scale,y=0,w=(view.open and 400 or 250)*scale,h=58*scale},
+      header=supplied.header or base_layout.header,
+      picker=supplied.picker or base_layout.picker,
+      review=supplied.review or base_layout.review,
+      apply=supplied.apply or base_layout.apply,
+      footer=supplied.footer or base_layout.footer,
     }
     if view.open then
       for _,r in pairs(layout) do if not valid_rect(r,width,height) then self:clear();return false end end
