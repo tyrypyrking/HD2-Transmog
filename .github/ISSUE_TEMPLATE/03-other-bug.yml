@@ -1,0 +1,62 @@
+name: Other bug or performance problem
+description: UI, ultrawide layout, restoration, sound, or performance issues.
+title: '[Bug] '
+body:
+- type: markdown
+  attributes:
+    value: Please search existing issues first. Unknown details are OK—do not delete your saved variants or recreate
+      a glitch just to file a report.
+- type: input
+  id: versions
+  attributes:
+    label: Transmog and Bingus versions
+    description: Include the exact Transmog version, especially any -debug suffix.
+    placeholder: Transmog 0.1.2-debug; Bingus v16
+  validations:
+    required: true
+- type: input
+  id: system
+  attributes:
+    label: Game version and operating system
+    description: Windows version, or Linux/Steam Deck with Proton version. Include the game build if known.
+    placeholder: Windows 11; game build unknown
+  validations:
+    required: true
+- type: textarea
+  id: mods
+  attributes:
+    label: Other enabled mods and installation
+    description: List other mods and your mod manager. If you already tested with only Bingus + Transmog, include
+      the result; that test is not required.
+    placeholder: Arsenal; Bingus + Transmog only, or list other enabled mods.
+  validations:
+    required: true
+- type: textarea
+  id: reproduce
+  attributes:
+    label: Steps, expected result, and actual result
+    description: Include the menu/location, how often this occurs, and any error text.
+  validations:
+    required: true
+- type: textarea
+  id: details
+  attributes:
+    label: Relevant details
+    description: 'For UI issues: resolution, window mode, and a screenshot. For FPS issues: CPU/GPU, settings, where
+      it happens, and FPS/frame time with and without Transmog if already measured. For restart issues: what you
+      equipped before closing the game.'
+- type: textarea
+  id: logs
+  attributes:
+    label: Logs and screenshots
+    description: 'Attach files from the affected run, preferably before relaunching:
+
+      - %LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs: HD2Transmog.log, HD2Transmog.previous.log (if present), BingusSharedLoader.log
+
+      - The adjacent Transmog folder: STATUS.txt
+
+
+      On Linux/Steam Deck, use the same AppData/Local location inside the game''s Proton prefix. Debug-build logging
+      is automatic; no marker is needed. Zip the requested files if GitHub rejects .log uploads. If logs are missing,
+      say so. Reports are public: redact personal names/paths from logs or screenshots; do not attach your whole
+      save folder.'

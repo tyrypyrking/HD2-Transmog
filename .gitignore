@@ -3,6 +3,11 @@
 !/.gitignore
 !/.gitattributes
 !/.gitlab-ci.yml
+!/.github/
+/.github/*
+!/.github/ISSUE_TEMPLATE/
+/.github/ISSUE_TEMPLATE/*
+!/.github/ISSUE_TEMPLATE/*.yml
 !/README.md
 !/requirements-dev.txt
 !/src/

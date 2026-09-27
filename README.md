@@ -60,6 +60,10 @@ Import `dist/HD2-Transmog-Foundation-0.1.2-debug.zip` through Arsenal as the exi
 
 The mod identity and saved-state format are unchanged in 0.1.2. Existing saved variants are retained. State is stored under `%LOCALAPPDATA%/CowboyBingus/Helldivers2/Transmog`; diagnostics are in `STATUS.txt` and the sibling `Logs/HD2Transmog.log`. Corrupt or unreadable state is preserved rather than discarded.
 
+## Reporting problems
+
+Use the [issue forms](https://github.com/tyrypyrking/HD2-Transmog/issues/new/choose) for crashes, equipment problems, or other bugs. They list the useful details and log files; missing logs do not prevent a report.
+
 ## Compatibility and limits
 
 Ownership is rechecked before saving or applying. The current catalog supports up to 120 saved variants. Unknown records become unavailable without deleting saved definitions.
