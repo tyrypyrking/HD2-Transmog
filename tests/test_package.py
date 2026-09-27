@@ -13,7 +13,7 @@ from archive import resource_hash
 
 def test_installable_package_and_luajit_discovery_entry():
     subprocess.run([sys.executable,'tools/build.py'],cwd=ROOT,check=True,capture_output=True,text=True)
-    package=ROOT/'dist/HD2-Transmog-Foundation-0.1.1.zip'
+    package=ROOT/'dist/HD2-Transmog-Foundation-0.1.2.zip'
     first=package.read_bytes()
     with zipfile.ZipFile(package) as z:
         assert set(z.namelist()) == {
@@ -44,8 +44,8 @@ def test_installable_package_and_luajit_discovery_entry():
 
 
 def test_release_tag_must_match_runtime_and_checksum_identifies_exact_zip():
-    package=ROOT/'dist/HD2-Transmog-Foundation-0.1.1.zip'
-    subprocess.run([sys.executable,'tools/build.py','--release-tag','v0.1.1'],cwd=ROOT,check=True,capture_output=True,text=True)
+    package=ROOT/'dist/HD2-Transmog-Foundation-0.1.2.zip'
+    subprocess.run([sys.executable,'tools/build.py','--release-tag','v0.1.2'],cwd=ROOT,check=True,capture_output=True,text=True)
     before=package.read_bytes()
     import hashlib
     assert package.with_suffix('.zip.sha256').read_text()==f'{hashlib.sha256(before).hexdigest()}  {package.name}\n'

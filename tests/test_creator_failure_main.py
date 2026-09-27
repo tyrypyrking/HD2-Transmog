@@ -76,6 +76,7 @@ local UiWorkflow={new=function(state,wizard,panel,actual_host)
  return flow
 end}
 local grid={phase='ready'}
+function grid:input_scope()return sample_mode~='exit'and grid_mode~='other_kind'and grid_mode~='other_mode'end
 function grid:snapshot()
  if grid_mode=='unreadable'then return nil,'fixture grid observation changed'end
  if grid_mode=='other_kind'or grid_mode=='other_mode'then presentation_active=false end
@@ -235,4 +236,20 @@ assert(command('variant_status') and files['debug-variant-status.txt'])
 assert(files['transmog.state']==saved_before and save_count==0)
 assert(logged_count('creator.input_error=')==1 and logged_count('runtime.error=')==0)
 if restore_mode=='ok'then assert(host.should_capture(input)==false,'dirty/rebuild flags survived cancellation')end
+''')
+
+
+def test_sound_reference_mode_yields_native_input_and_resumes_only_on_request():
+    run('''
+assert(command('open_creator') and flow:view().open)
+assert(command('sound_reference','on') and runtime.sound_reference)
+local guarded=before_count;local native=native_updates;local drawn=wizard_draws
+input.down=true
+for i=1,5 do advance()end
+input.down=false;advance()
+assert(before_count==guarded and wizard_draws==drawn and native_updates==native+6)
+assert(not command('sound_reference','guess'))
+assert(command('sound_reference','off') and not runtime.sound_reference)
+assert(command('open_creator') and flow:view().open)
+assert(save_count==0 and logged_count('runtime.error=')==0)
 ''')

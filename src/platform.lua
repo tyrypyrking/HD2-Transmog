@@ -3,8 +3,8 @@
 -- Thin adapter between the parent addon and the host: file storage under the
 -- loader's log directory sibling, focus/cursor sampling via user32, and
 -- monotonic time. NO game hooks, NO game memory access, NO global input hooks.
--- The only game-side surface is the optional `engine` (stingray) table for
--- Gui.resolution and Mouse.button — validated before use.
+-- Game-side surfaces are Gui.resolution and Mouse.button. Optional XInput
+-- state reads add controller A without hooks or synthetic input.
 --
 -- ============================================================================
 -- API CONTRACT
@@ -32,7 +32,8 @@
 --     directory  -> loader.log_directory .. '/../Transmog'  (for diagnostics)
 --     read(name)      -> text | nil, reason   -- reason in a small closed set
 --     write_atomic(name, text, preserve?) -> true | nil, reason
---     sample_input()  -> {x=, y=, down=} | nil  -- nil when not focused/in-client
+--     sample_input() -> {x=,y=,down=,confirm_down=?,controller_source=?} | nil
+--       Focus is required. A connected controller works with the cursor outside.
 --     now()           -> milliseconds (GetTickCount64, monotonic-ish)
 --   }
 --
@@ -66,6 +67,7 @@
 -- engine.Mouse by returning down=false instead of erroring.
 
 local M = {}
+local Pad=ControllerInput or require('src.controller_input')
 
 M.MAX_STATE_BYTES = 1024 * 1024
 M.STATE_NAME = 'state.json'
@@ -162,6 +164,8 @@ function M.new(loader, engine, natives)
     local kernel, user = natives and natives.kernel or nil, natives and natives.user or nil
     local point, rect, idbuf = nil, nil, nil
     if natives and natives.buffers then point, rect, idbuf = natives.buffers() end
+    local controller=Pad.new(natives and natives.ffi,natives and natives.read_controller,
+        kernel and kernel.GetTickCount64 and function()return tonumber(kernel.GetTickCount64())end or nil)
 
     local function path(name)
         local ok, why = M.safe_name(name)
@@ -302,8 +306,8 @@ function M.new(loader, engine, natives)
     -- -- sample_input ----------------------------------------------------------
     -- Focus-gated cursor sample: the foreground window must belong to our own
     -- process (GetForegroundWindow/GetWindowThreadProcessId), the cursor must
-    -- sit inside the client rect, and the result is mapped to Gui.resolution
-    -- space (bottom-left). down follows the DiverKit Mouse contract.
+    -- sit inside the client rect for mouse input. Controller confirmation only
+    -- requires focus. Cursor coordinates use Gui space (bottom-left).
 
     function self.sample_input()
         if not (user and kernel and engine and type(engine.Gui) == 'table') then return nil end
@@ -321,20 +325,24 @@ function M.new(loader, engine, natives)
         -- Must report success before the pid buffer is trusted.
         if tonumber(user.GetWindowThreadProcessId(vp(window), vp(idbuf))) == 0 then return nil end
         if idbuf[0] ~= kernel.GetCurrentProcessId() then return nil end
-        if user.GetCursorPos(vp(point)) == 0 then return nil end
-        if user.ScreenToClient(vp(window), vp(point)) == 0 then return nil end
+        local pad=controller()
+        local cursor_ok=user.GetCursorPos(vp(point))~=0 and user.ScreenToClient(vp(window),vp(point))~=0
         if user.GetClientRect(vp(window), vp(rect)) == 0 then return nil end
         local w, h = rect[0].right - rect[0].left, rect[0].bottom - rect[0].top
         local rw, rh = engine.Gui.resolution()
-        local x, y = M.map_cursor(point[0].x, point[0].y, w, h, rw, rh)
-        if not x then return nil end
+        local x,y
+        if cursor_ok then x,y=M.map_cursor(point[0].x,point[0].y,w,h,rw,rh)end
+        if not x and not pad then return nil end
+        local cursor_inside=x~=nil
+        x,y=x or -1,y or -1
         local down = false
         local mouse = engine.Mouse
-        if type(mouse) == 'table' and type(mouse.button_id) == 'function' and type(mouse.button) == 'function' then
+        if cursor_inside and type(mouse) == 'table' and type(mouse.button_id) == 'function' and type(mouse.button) == 'function' then
             local value = mouse.button(mouse.button_id('left'))
             down = value == true or (type(value) == 'number' and value > 0)
         end
-        return { x = x, y = y, down = down }
+        return {x=x,y=y,down=down,confirm_down=pad and pad.confirm_down,
+            controller_source=pad and pad.controller_source,cursor_inside=cursor_inside}
     end
 
     -- -- now -------------------------------------------------------------------

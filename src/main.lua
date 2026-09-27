@@ -1,8 +1,9 @@
 -- Bundled after State, Platform, Adapter and Panel by tools/build.py.
 local MODULE = 'mods/hd2transmog/foundation'
 local UiLayout=UiLayout or require('src.ui_layout')
+local EquippedState=EquippedState or require('src.equipped_state')
 if rawget(_G, 'HD2Transmog') then return rawget(_G, 'HD2Transmog') end
-local runtime = {version='0.1.1', status='starting', armor_writes=false,native_hitbox_source='root',automatic_custom_ui=true,profile={frames=0,tick=0,guard=0,draw=0}}
+local runtime = {version='0.1.2', status='starting', armor_writes=false,native_hitbox_source='root',automatic_custom_ui=true,profile={frames=0,tick=0,guard=0,draw=0}}
 rawset(_G, 'HD2Transmog', runtime)
 local loader = rawget(_G, 'CowboyBingusModLoader')
 local log
@@ -21,6 +22,9 @@ local ok, failure = pcall(function()
     local debug_bridge=DebugBridge and DebugBridge.new(fs,engine,report)
     local surface=Panel.new(engine)
     local domain=State.new()
+    local equipped_state=EquippedState.new(fs,State,report)
+    local startup={record=equipped_state:record(),next_sample=0}
+    local startup_guard
     local editor=State.editor_new()
     local catalog_result, catalog_adapter, catalog_probe, catalog_failed
     local catalog_resolved,catalog_resolver_frame=false,nil
@@ -132,6 +136,7 @@ local ok, failure = pcall(function()
                 result.context.variant_labels=names
             end
 
+            result.context.options_revision=0
             ownership_next=fs.now()+2000;ownership_running=false;ownership_changed=false
             catalog_requested=false
             State.reconcile_owned(domain,result.catalog,result.owned)
@@ -181,15 +186,22 @@ local ok, failure = pcall(function()
         if not stat_ui.resolver then stat_ui.resolver=ArmorStatResolver.new(catalog_adapter:data_bridge(),report)end
         local phase,evidence=stat_ui.resolver:step()
         if phase~='ready' then
+            catalog_result.context.stats_status=phase=='failed'and 'unavailable'or 'loading'
             if phase=='failed'and not stat_ui.reported then stat_ui.reported=true;report('stats.unavailable',evidence)end
             return
         end
         if now<(stat_ui.next_sample or 0)then return end
         stat_ui.next_sample=now+1000
         stat_ui.player=stat_ui.player or PlayerCustomizationProbe.new(catalog_adapter:data_bridge(),CatalogData)
-        local player=stat_ui.player:sample()
-        local body=player and player.current and player.current.body_type
-        if body~=0 and body~=1 then return end
+        local player,why=stat_ui.player:sample_body_type()
+        local body=player and player.body_type
+        if body~=0 and body~=1 then
+            catalog_result.context.stats_status='player_unavailable'
+            if stat_ui.body_wait~=why then stat_ui.body_wait=why;report('stats.body_wait',why)end
+            return
+        end
+        stat_ui.body_wait=nil
+        catalog_result.context.stats_status='ready'
         if stat_ui.body==body and stat_ui.catalog==catalog_result then return end
         assert(evidence.verify(),'Native stat formula changed')
         local groups,reason=ArmorBaseStats.choices(catalog_result,body,evidence.contract);assert(groups,reason)
@@ -200,6 +212,7 @@ local ok, failure = pcall(function()
                 catalog_result.context.stats_profiles[id]=profile
             end
         end
+        catalog_result.context.options_revision=(catalog_result.context.options_revision or 0)+1
         stat_ui.body=body;stat_ui.catalog=catalog_result
         report('stats.base_choices',#groups)
     end
@@ -293,6 +306,11 @@ local ok, failure = pcall(function()
         end
         variant_session=VariantSession.new{
             catalog=function()return catalog_result end,
+            before_apply=function(background)
+                if not background then startup.finished=true end
+                return equipped_state:clear()
+            end,
+            persist_equipped=function(label,request)return equipped_state:remember(label,request)end,
             validate_composition=function(request)return AppearancePatch.compatible(catalog_result,request)end,
             new_patch=function()return AppearancePatch.new(RuntimeWriter.new(catalog_adapter:data_bridge(),catalog_result))end,
             detail_state=function()return grid_ui.bridge:detail_state()end,
@@ -313,8 +331,11 @@ local ok, failure = pcall(function()
                 return focused~=nil,why
             end,
             player=function()return player:sample()end,
-            new_refresh=function()
-                local bridge,why=ArmorRefreshBridge.new(grid_ui.bridge,player,catalog_result)
+            new_refresh=function(background)
+                local bridge,why
+                if background then
+                    bridge,why=grid_ui.bridge:player_refresh_bridge(player,catalog_result,catalog_adapter:data_bridge(),startup_guard)
+                else bridge,why=ArmorRefreshBridge.new(grid_ui.bridge,player,catalog_result)end
                 if not bridge then return nil,why end
                 return ArmorRefresh.new(bridge,report)
             end,
@@ -353,6 +374,12 @@ local ok, failure = pcall(function()
             native_picker=true,
             allow_create=grid_ui.screen_kind~='deployment',
             current=function()return domain,catalog_result and catalog_result.context or {}end,
+            input_scope=function()
+                if not(grid_ui.bridge and grid_ui.bridge.phase=='ready')then return false end
+                local active,why=grid_ui.bridge:input_scope()
+                assert(active~=nil,why)
+                return active
+            end,
             consume_select=function()
                 if not(grid_ui.bridge and grid_ui.bridge.phase=='ready')then return nil,'Native grid is not ready'end
                 return grid_ui.bridge:consume_select()
@@ -474,6 +501,10 @@ local ok, failure = pcall(function()
                 local written,error=fs.write_atomic('transmog.state','HD2TRANSMOG_UI\t1\n'..view.tab..'\n'..encoded)
                 if not written then return nil,error end
                 domain.presets=candidate.presets
+                local remembered=equipped_state:record()
+                if remembered and remembered.label==label then
+                    local cleared,why=equipped_state:clear();if not cleared then report('variant.persistence_failed',why)end
+                end
                 if variant_session then variant_session:browse()end
                 grid_ui.selected_label=nil;grid_ui.resume_label=nil;grid_ui.last_created_label=nil
                 local restored,why=presentation.restore()
@@ -497,7 +528,22 @@ local ok, failure = pcall(function()
                 if domain.ownership_verified~=true then state.can_apply=false end
                 return state
             end,
+            validate_confirm=function(action)
+                local native=grid_ui.bridge and grid_ui.bridge:snapshot(catalog_result)
+                if not(native and native.kind==4 and native.native_view_mode==0
+                    and native.identity_mapping_verified and grid_ui.custom_cards)then return false end
+                local index=native.logical_selected_index
+                if type(index)~='number'then return false end
+                local card=grid_ui.custom_cards[index+1]
+                if action.label then return card and card.kind=='variant'and card.label==action.label or false end
+                if index<#grid_ui.custom_cards or index~=grid_ui.native_browse_index then return false end
+                for _,widget in ipairs(native.widgets or {})do
+                    if widget.logical_index==index and widget.bound_owned_kit_id==action.id then return true end
+                end
+                return false
+            end,
             apply_variant=function()return saved_session():apply(fs.now())end,
+            controller_confirmed=function(source)report('variant.controller_confirm',source)end,
             notice=function(reason)report('creator.notice',reason)end,
         })
         return creation
@@ -588,6 +634,50 @@ local ok, failure = pcall(function()
         end
         return true
     end
+    startup_guard=function()
+        local ok,ready=pcall(ship_scene);return ok and ready==true
+    end
+    local function restore_on_startup(now)
+        if startup.active then
+            variant_session:step(now)
+            runtime.armor_writes=variant_session:is_active()
+            if not variant_session:restoring()then
+                startup.active=false;startup.finished=true
+                if variant_session.restore_status=='complete'then grid_ui.resume_label=startup.record.label end
+                report('restore.result',variant_session.restore_status or 'failed')
+            end
+            return
+        end
+        if startup.finished or not startup.record or locked or now<startup.next_sample then return end
+        startup.next_sample=now+500
+        if not EquippedState.matches(startup.record,domain,startup.record.target_id)then
+            startup.finished=true;report('restore.skipped','saved variant removed or changed');return
+        end
+        if not(catalog_resolved and grid_ui.bridge and grid_ui.bridge.phase=='ready')then return end
+        if not startup_guard()or grid_ui.bridge:idle_menu()~=true then return end
+        startup.deadline=startup.deadline or now+30000
+        if now>startup.deadline then startup.finished=true;report('restore.skipped','startup evidence timed out');return end
+        startup.player=startup.player or PlayerCustomizationProbe.new(catalog_adapter:data_bridge(),CatalogData)
+        local actor,why=startup.player:sample()
+        if not actor or not actor.settled then
+            if startup.wait~=why then startup.wait=why;report('restore.wait',why or 'armor is transitioning')end
+            return
+        end
+        if not EquippedState.matches(startup.record,domain,actor.request_armor_id)then
+            startup.finished=true;report('restore.skipped','a different ordinary armor is equipped');return
+        end
+        if not catalog_result then
+            if catalog_failed then startup.finished=true;report('restore.skipped',catalog_failed);return end
+            update_catalog()
+            if not catalog_result then startup.next_sample=now;return end
+        end
+        local allowed,error=AppearancePatch.compatible(catalog_result,startup.record.request)
+        if not allowed then startup.finished=true;report('restore.skipped',error);return end
+        local session=saved_session()
+        local restored,reason=session:restore(startup.record.label,startup.record.request,now)
+        if not restored then startup.finished=true;report('restore.skipped',reason);return end
+        startup.active=true;report('restore.started',startup.record.label)
+    end
     local function armory_open_status(kind,message)
         report('debug.open_armory.'..kind,message)
         fs.write_atomic('debug-armory-open.txt','HD2TM_ARMORY_OPEN 1\n'..
@@ -595,6 +685,23 @@ local ok, failure = pcall(function()
     end
     local function poll_debug()
     if debug_bridge then debug_bridge:poll({
+            sound_reference=function(args)
+                assert(args=='on'or args=='off','Expected on or off')
+                assert(not(variant_session and variant_session:busy()),'Wait for the armor change to finish')
+                if args=='on'then
+                    assert(presentation.restore())
+                    if creation then creation:leave();creation=nil end
+                    if variant_session then assert(variant_session:cancel_preview())end
+                    surface:clear();reset();grid_ui.preview=nil;grid_ui.selected_label=nil
+                    grid_ui.custom_rows_dirty=false;grid_ui.rebuild_pending=nil;grid_ui.rebuild_after_creator=false
+                    runtime.sound_reference=true
+                else
+                    runtime.sound_reference=false;grid_ui.initial_attempted=false
+                    if section then section:request(fs.now())end
+                end
+                return args=='on'and 'Native equipment reference: custom UI and capture disabled'
+                    or 'Custom UI resumed'
+            end,
             variant_status=variant_status,
             icon_probe=function(args)
                 if grid_ui.icon_probe then grid_ui.icon_probe:clear();grid_ui.icon_probe=nil end
@@ -795,6 +902,7 @@ local ok, failure = pcall(function()
         end
         local catalog_stepped=false
         poll_debug()
+        if runtime.sound_reference then return end
         if armory_open_pending then
             local passed,phase,reason=pcall(function()return armory_open:step()end)
             if not passed or phase=='failed' then
@@ -859,6 +967,12 @@ local ok, failure = pcall(function()
                     fs.write_atomic('debug-armory-producers.txt',grid_ui.bridge:producer_report());grid_ui.producer_written=true
                 end
             end
+        end
+        local restored,restore_error=pcall(restore_on_startup,now)
+        if not restored then
+            startup.finished=true;startup.active=false
+            if variant_session then variant_session:abandon_restore(restore_error)end
+            report('restore.skipped',restore_error)
         end
         if not sample then
             if why and runtime.wait_reason~=why then runtime.wait_reason=why;report('screen.wait',why) end
@@ -976,13 +1090,16 @@ local ok, failure = pcall(function()
         end
         if not stat_ui.disabled then
             local verified,reason=pcall(update_base_stats,now)
-            if not verified then stat_ui.disabled=true;report('stats.unavailable',reason)end
+            if not verified then
+                if catalog_result then catalog_result.context.stats_status='unavailable'end
+                if stat_ui.last_error~=reason then report('stats.unavailable',reason);stat_ui.last_error=reason end
+            end
         end
         -- C/Z category changes are native navigation, independent of mouse clicks.
         -- Adopt the new row before stepping a queued preview of the old variant.
         local observed=grid_ui.snapshot
         if creation and grid_ui.presentation and grid_ui.custom_cards and observed
-            and observed.identity_mapping_verified and not creation:view().open
+            and observed.identity_mapping_verified and not creation:is_open()
             and type(observed.logical_selected_group)=='number' then
             local group=observed.logical_selected_group
             if grid_ui.navigation_group~=nil and group~=grid_ui.navigation_group then grid_ui.navigation_pending=true;grid_ui.navigation_cleared=nil end
@@ -1021,6 +1138,38 @@ local ok, failure = pcall(function()
         if not input then surface:clear();reset();return end
         local armor_visible=grid_ui.snapshot and grid_ui.snapshot.kind==4 and grid_ui.snapshot.native_view_mode==0
             and grid_ui.snapshot.identity_mapping_verified
+        -- D-pad/stick navigation can change cards without changing category.
+        -- Adopt that native focus before A is allowed to confirm a variant.
+        if input.controller_source and creation and armor_visible and grid_ui.presentation
+            and grid_ui.custom_cards and not creation:is_open()
+            and not(variant_session and (variant_session:busy()or variant_session:view().apply_pending))then
+            local index=grid_ui.snapshot.logical_selected_index
+            local card=type(index)=='number'and grid_ui.custom_cards[index+1]
+            local action
+            if card and card.kind=='variant'and grid_ui.selected_label~=card.label then
+                action={type='select_variant',label=card.label}
+            elseif type(index)=='number'and index>=#grid_ui.custom_cards and grid_ui.native_browse_index~=index then
+                for _,widget in ipairs(grid_ui.snapshot.widgets or {})do
+                    if widget.logical_index==index and widget.bound_owned_kit_id then
+                        action={type='select_native_look',id=widget.bound_owned_kit_id,index=index};break
+                    end
+                end
+            end
+            if action then
+                local ready,why=true,nil
+                if variant_session then ready,why=variant_session:cancel_preview()end
+                if ready then
+                    creation:clear_selected_variant()
+                    ready,why=creation:action(action)
+                end
+                if not ready then report('variant.controller_selection',why)end
+            elseif card and card.kind~='variant'and (grid_ui.selected_label
+                or variant_session and variant_session:view().native_override)then
+                if not variant_session or variant_session:cancel_preview()then
+                    creation:clear_selected_variant();grid_ui.selected_label=nil;grid_ui.native_browse_index=nil
+                end
+            end
+        end
         if section then
             local observed=grid_ui.snapshot
             local armor
@@ -1037,7 +1186,7 @@ local ok, failure = pcall(function()
             grid_ui.initial_attempted=true;creation_flow();grid_ui.custom_rows_dirty=true
         end
         if creation then
-            if ownership_changed and not creation:view().open
+            if ownership_changed and not creation:is_open()
                 and not(variant_session and type(variant_session.busy)=='function'and variant_session:busy()) then
                 local restored,reason=presentation.restore()
                 ownership_changed=false
@@ -1049,7 +1198,7 @@ local ok, failure = pcall(function()
                     if section then section:pause('Reopen Armor after ownership changed')end
                 end
             end
-            if grid_ui.custom_rows_dirty and not creation:view().open then
+            if grid_ui.custom_rows_dirty and not creation:is_open() then
                 grid_ui.custom_rows_dirty=false
                 local model,why=grid_ui.bridge:inspect_model(catalog_result)
                 if model and model.offers[1]then
@@ -1150,7 +1299,7 @@ local ok, failure = pcall(function()
     rawset(_G,'update',function(...)
         if creation then
             local started_guard=os.clock()
-            local guarded,ready,reason=pcall(function()return creation:before(fs.sample_input())end)
+            local guarded,ready,reason=pcall(function()return creation:before(fs.sample_input)end)
             runtime.profile.guard=runtime.profile.guard+os.clock()-started_guard
             if not guarded or not ready then
                 report('creator.input_error',guarded and reason or ready)

@@ -958,7 +958,7 @@ def validate_route(route):
         raise AutomationError("Route duration exceeds 120-second action budget")
 
 
-DEBUG_COMMANDS = ("inspect_api", "probe_armory", "inspect_controller", "inspect_world",
+DEBUG_COMMANDS = ("sound_reference", "inspect_api", "probe_armory", "inspect_controller", "inspect_world",
                   "inspect_native_code", "inspect_native_callee", "inspect_native_switch", "inspect_armory_grid", "inspect_armory_model", "inspect_armory_producers", "inspect_render_types", "inspect_player_armor", "layout_trial", "probe_armor", "open_creator", "presentation_trial", "ui_status", "icon_probe",
                   "open_armory", "read_catalog", "variant_status", "draft_variant",
                   "save_variant", "select_variant", "apply_variant", "reset_variant")

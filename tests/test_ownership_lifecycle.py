@@ -35,8 +35,8 @@ end
 local ArmorStatResolver={new=function()return {step=function()
  return 'ready',{contract={},verify=function()return true end}
 end}end}
-local PlayerCustomizationProbe={new=function()return {sample=function()
- return {current={body_type=0}}
+local PlayerCustomizationProbe={new=function()return {sample_body_type=function()
+ return {body_type=0}
 end}end}
 local ArmorBaseStats={choices=function(result)
  assert(result.capabilities.ownership_verified,'base stats called without ownership')

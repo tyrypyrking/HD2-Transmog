@@ -615,3 +615,21 @@ assert(not ok and why:find('readback differs') and commits==1)
 -- It may have enqueued native work: do not guess a rollback after invocation.
 assert(read(owner+0x70,4)==b(0x5678,4))
 ''')
+
+
+def test_cached_offer_decoding_tracks_changed_bytes_and_conflicting_duplicates():
+    run_lua(SELECTION+r'''
+local g=G.new(bridge,nil,backend);assert(ready(g)=='ready')
+assert(g:snapshot(catalog).selected_kit_id=='armor:00001234')
+assert(g:snapshot(catalog).selected_kit_id=='armor:00001234')
+-- Same pointer/count, different mapping must immediately replace the decode.
+put(progression+0xb9ce4+8,b(0x5678,4))
+assert(g:snapshot(catalog).selected_kit_id=='armor:00005678')
+put(progression+0xb9ce4+24+4,b(77,4))
+put(progression+0xb9ce4+24+8,b(0x1234,4))
+assert(not g:snapshot(catalog).identity_mapping_verified)
+assert(not g:snapshot(catalog).identity_mapping_verified)
+-- Shrinking the freshly read table removes the conflict.
+put(progression+0x1ce0,b(1,4))
+assert(g:snapshot(catalog).selected_kit_id=='armor:00005678')
+''')

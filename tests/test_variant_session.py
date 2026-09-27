@@ -384,3 +384,67 @@ assert(feedback==1 and #commits==1 and s.phase=='equipped'and not s:busy())
 local found=false;for _,line in ipairs(logs)do if line.key=='variant.feedback_failed'then found=true end end
 assert(found)
 ''')
+
+
+def test_background_restore_reuses_refresh_and_patch_without_ui_or_feedback():
+    run_lua(FIXTURE+r'''
+local persisted=0
+host.preview_variant=function()error('startup must not open or preview UI')end
+host.refresh_widgets=function()error('startup must not refresh menu widgets')end
+host.equipped_feedback=function()error('startup must not play user Equip feedback')end
+host.before_apply=function(background)assert(background);return true end
+host.persist_equipped=function(label,r)assert(label=='Saved'and r.stats_id==request.stats_id);persisted=persisted+1;return true end
+live.controller_armor_id=B;live.profile_armor_id=B;live.request_armor_id=B;live.cache_armor_id=B
+assert(s:restore('Saved',request,0)and s:restoring())
+for t=1,15 do
+ s:step(t);live.cache_armor_id=live.request_armor_id;live.cache_passive=live.request_armor_id==B and 1 or 7
+end
+assert(s.restore_status=='complete'and not s:restoring()and not s:busy()and s:is_active())
+assert(#commits==2 and committed==nil and persisted==1 and s:has_committed())
+assert(s:view().native_details==false and s.phase=='idle')
+''')
+
+
+def test_unknown_startup_definition_and_durable_clear_failure_make_no_native_changes():
+    run_lua(FIXTURE+r'''
+local broken={appearance_id=A,stats_id='missing',passive_variant_id='perk-a'}
+assert(not s:restore('Missing',broken,0)and #commits==0 and applies==0)
+host.before_apply=function()return nil,'cannot clear startup intent'end
+assert(not s:restore('Saved',request,0))
+assert(#commits==0 and applies==0 and not s:busy())
+''')
+
+
+def test_failed_background_restore_does_not_lock_the_armory_or_retry_automatically():
+    run_lua(FIXTURE+r'''
+live.controller_armor_id=B;live.profile_armor_id=B;live.request_armor_id=B;live.cache_armor_id=B
+assert(s:restore('Saved',request,0));fail_commit=true;s:step(1)
+assert(s.restore_status=='failed'and not s:restoring()and not s:busy())
+local count=#commits
+for t=2,20 do s:step(t)end
+assert(#commits==count and applies==0)
+''')
+
+
+def test_reopening_restored_variant_recognizes_verified_equipped_composition_without_reapply():
+    run_lua(FIXTURE+r'''
+host.player=function()return {request_armor_id=live.request_armor_id,cache_armor_id=live.cache_armor_id,cache_passive_enum=live.cache_passive}end
+ready(0);equip(10);assert(s:leave())
+local count=#commits
+assert(s:select('Saved',request,20));s:step(20);s:step(21)
+assert(s.phase=='equipped'and not s:view().can_apply and #commits==count)
+assert(previews[#previews].suppress==false)
+''')
+
+
+def test_failed_equipped_record_save_does_not_repeat_successful_native_commits():
+    run_lua(FIXTURE+r'''
+local saves=0
+host.before_apply=function()return true end
+host.persist_equipped=function()saves=saves+1;return nil,'disk unavailable'end
+ready(0);equip(10)
+for t=20,30 do s:step(t)end
+assert(saves==1 and #commits==1 and s.phase=='equipped')
+local found=false;for _,line in ipairs(logs)do if line.key=='variant.persistence_failed'then found=true end end
+assert(found)
+''')

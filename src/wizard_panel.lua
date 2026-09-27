@@ -366,7 +366,8 @@ function M.new(engine)
       end
       rendered.section=visible
     elseif view.open then
-      local visible={step=view.step,title=view.title,header=layout.header,can_back=view.can_back,can_cancel=view.can_cancel}
+      local visible={step=view.step,title=view.title,header=layout.header,can_back=view.can_back,can_cancel=view.can_cancel,
+        empty_options_notice=view.empty_options_notice}
       if view.step~=1 then
         local options=view.options or {}
         local row_h=(view.step==2 and 122 or 208)*scale
@@ -755,7 +756,12 @@ function M.new(engine)
             end
           end
         end
-        if #options==0 then text('Waiting for verified owned choices.',layout.picker.x+12*scale,layout.picker.y+layout.picker.h-35*scale,17,muted)end
+        if #options==0 then
+          local lines=wrap(view.empty_options_notice or 'Waiting for verified owned choices.',52)
+          for i=1,math.min(5,#lines)do
+            text(lines[i],layout.picker.x+12*scale,layout.picker.y+layout.picker.h-(35+(i-1)*23)*scale,17,muted)
+          end
+        end
         pager('options',{x=layout.picker.x+layout.picker.w-147*scale,y=layout.picker.y+5*scale},pages)
         if view.step==2 then text('Passive bonuses are excluded.',layout.picker.x+12*scale,layout.picker.y+13*scale,13,muted)end
       end

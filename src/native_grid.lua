@@ -40,6 +40,7 @@ local function bytes(h)return(h:gsub('%x%x',function(v)return string.char(tonumb
 local function ident(v)return string.format('armor:%08x',v)end
 local PATTERNS={
  {name='detail_input',hex='48895c241048896c2418565741564883ec308b8104e00b004d8bf0',length=1955,optional=true},
+ {name='equip_audio_source',hex='3b9f8c290900740a8bd3488bcfe8',length=32,optional=true},
  {name='header_text',hex='ba421e1862488d8d10010000e8000000008bc785ff741883e801740c83f8017513bb1cbbde21',wild={{13,16}},length=95,optional=true},
  {name='category_text',hex='418b85f02809004d8d879899090083f8ff',length=201,optional=true},
  {name='text_string',hex='40534883ec20488bd94881c110010000e84bd8ffff84c0745b8b93b8000000',length=121,optional=true},
@@ -94,8 +95,8 @@ local function native()
   button_state=function(at,widget,state)
    ffi.cast(native_types.detail_passive,at)(ffi.cast('void*',widget),state);return true
   end,
-  ui_sound=function(at,event)
-   ffi.cast(native_types.detail_passive,at)(nil,event);return true
+  equipment_sound=function(at,grid,offer)
+   ffi.cast(native_types.detail_passive,at)(ffi.cast('void*',grid),offer);return true
   end,
   text_template=function(at,widget,key)
    ffi.cast(native_types.detail_passive,at)(ffi.cast('void*',widget),key);return true
@@ -280,8 +281,8 @@ function M.new(bridge,report,backend)
     proofs[#proofs+1]={rva=setter,bytes=body}
     targets.deployment_commit={entry=base+setter,profile_global=global}
    elseif p.spec.name=='detail_input'then
-    -- Resolve the UI audio dispatcher through the native button input edge.
-    -- Completion uses the button's separate completion event, not press/hold.
+    -- Validate the common UI audio backend. The equipment event itself is
+    -- resolved separately from the successful native equipment-selection path.
     for _,op in ipairs({'lea rdi, [rbx+0x49f0]','mov byte [rbx+0x91a3], 0x1',
      'mov edx, [rbx+0x91b0]'})do assert(has(rows,op),'native Equip input ABI differs: '..op)end
     local sound
@@ -296,6 +297,51 @@ function M.new(bridge,report,backend)
      assert(has(body,op),'native UI audio ABI differs: '..op)
     end
     proofs[#proofs+1]={rva=sound,bytes=raw};targets.equip_sound=base+sound
+   elseif p.spec.name=='equip_audio_source'then
+    -- Actual successful equipment selection calls this helper before updating
+    -- the equipped marker. Button press/hold/release sounds are unrelated.
+    assert(rows[1].op=='cmp ebx, [rdi+0x9298c]'and rows[2].op:match('^jz 0x')
+     and rows[3].op=='mov edx, ebx'and rows[4].op=='mov rcx, rdi',
+     'native equipment audio caller differs')
+    local entry=tonumber(assert(rows[5].op:match('^call 0x(%x+)$')),16)
+    assert(inside(entry,500,true),'native equipment audio helper unavailable')
+    local raw=read(base+entry,500);local body=decoder.decode(raw,entry,256)
+    for _,op in ipairs({'mov ecx, [rcx+0x92fc4]','cmp dword [rax], +0x0e',
+     'mov r9d, [rcx+0x1ce0]','add rcx, 0x000b9ce4','cmp [rcx+0x4], edx',
+     'mov edx, 0x7dc5fafe','mov edx, 0xe5126f17','mov edx, 0xf139f191','mov edx, 0x09ad679b'})do
+     assert(has(body,op),'native equipment audio category route differs: '..op)
+    end
+    local getter,menu_slot,offers_slot
+    for i,row in ipairs(body)do
+     local sign,delta=row.op:match('^mov r9, %[rip([+-])0x(%x+)%]$')
+     if delta then menu_slot=base+body[i+1].rva+(sign=='-'and -1 or 1)*tonumber(delta,16)end
+     sign,delta=row.op:match('^mov rcx, %[rip([+-])0x(%x+)%]$')
+     if delta then
+      local slot=base+body[i+1].rva+(sign=='-'and -1 or 1)*tonumber(delta,16)
+      assert(not offers_slot or offers_slot==slot,'equipment audio offer tables differ');offers_slot=slot
+     end
+     if not getter and row.op=='mov ecx, [rcx+0x8]'then
+      getter=tonumber(assert(body[i+1].op:match('^call 0x(%x+)$')),16)
+     end
+     local jump=row.op:match('^jmp 0x(%x+)$')
+     if jump then
+      local at=tonumber(jump,16)
+      if at<entry or at>=entry+500 then assert(base+at==targets.equip_sound,'equipment audio dispatcher differs')end
+     end
+    end
+    assert(menu_slot==bridge.menu_global and offers_slot and getter and inside(getter,46,true),
+     'equipment audio context/lookup unavailable')
+    local getter_raw=read(base+getter,46);local ops=decoder.decode(getter_raw,getter,64)
+    for _,op in ipairs({'mov r9d, [r11+0x8]','mov r10, [r11]','mov rdx, [r10+rax*8]',
+     'cmp [rdx], ecx','mov eax, [rdx+0x28]','mov eax, 0x3'})do
+     assert(has(ops,op),'equipment audio item-category lookup differs: '..op)
+    end
+    local sign,delta=ops[1].op:match('^mov r11, %[rip([+-])0x(%x+)%]$')
+    assert(delta,'equipment audio catalog global unavailable')
+    local catalog_slot=base+ops[2].rva+(sign=='-'and -1 or 1)*tonumber(delta,16)
+    assert(inside(catalog_slot-base,8,false)and inside(offers_slot-base,8,false),'equipment audio globals outside image')
+    proofs[#proofs+1]={rva=entry,bytes=raw};proofs[#proofs+1]={rva=getter,bytes=getter_raw}
+    targets.equipment_audio={entry=base+entry,offers_global=offers_slot,catalog_global=catalog_slot}
    elseif p.spec.name=='preview_notify'then
     for _,op in ipairs({'cmp dword [rcx+0x178c88], +0x01','mov rdi, rcx',
      'cmp byte [rcx+0x178c8e], 0x0','mov r9d, [rcx+0x92fbc]',
@@ -613,11 +659,16 @@ function M.new(bridge,report,backend)
   if not ok then self.phase='failed';self.failure=tostring(why);report('grid.bridge',self.failure)end
   return self.phase,self.failure
  end
- local function context(allow_hidden)
+ local function context(allow_hidden,scope_only)
   assert(bridge.verify(),'Armory UI proof changed')
   local watched,observed_bytes={},0;local function watch(at,n)
    observed_bytes=observed_bytes+n;assert(#watched<256 and observed_bytes<=196608,'grid observation budget exceeded')
    local raw=read(at,n);watched[#watched+1]={at=at,n=n,raw=raw};return raw end
+  local function inactive_scope()
+   assert(bridge.verify(),'UI proof changed during scope check')
+   for _,span in ipairs(watched)do assert(read(span.at,span.n)==span.raw,'Equipment scope changed')end
+   return false
+  end
   local menu_slot=watch(bridge.menu_global,8);local menu=assert(pointer(menu_slot),'menu unavailable')
   local state=watch(menu+0x4294,32)
   local screen=u32(state,0);assert(screen==5 or screen==14,'not native Armor picker')
@@ -627,11 +678,14 @@ function M.new(bridge,report,backend)
   if screen==14 then
    assert(bridge.deployment_picker_proven and targets.deployment_commit and code_current(),'Equipment layout proof unavailable')
    local bucket=watch(manager+0x62a0,24)
+   if scope_only and u32(bucket,0)==0 then return inactive_scope()end
    assert(u32(bucket,0)==1 and u32(bucket,16)==0xe5,'Equipment controller unavailable')
    owner=assert(pointer(bucket,8),'Equipment controller invalid')
-   assert(u32(watch(owner+8,4),0)==1 and watch(owner+0x273990,1)=='\1'
+   local active=u32(watch(owner+8,4),0)==1 and watch(owner+0x273990,1)=='\1'
     and watch(owner+0x2808,1)=='\0'and u32(watch(owner+0x2818,4),0)==3
-    and u32(watch(owner+0x281c,4),0)==0,'Equipment Armor picker unavailable')
+    and u32(watch(owner+0x281c,4),0)==0
+   if scope_only and not active then return inactive_scope()end
+   assert(active,'Equipment Armor picker unavailable')
    local slot=u32(watch(owner+0x27d0,4),0)
    assert(slot<4 and u32(watch(owner+0x27d4,4),0)==slot,'Equipment slot changed')
    local session=assert(pointer(watch(bridge.session_global,8)),'Equipment session unavailable')
@@ -725,6 +779,7 @@ function M.new(bridge,report,backend)
   end)
   if not ok then return nil,tostring(result)end;return result
  end
+ local offer_cache
  function self:snapshot(catalog_result)
   local ok,result=pcall(function()
    local ctx=context();local g,watch=ctx.grid,ctx.watch
@@ -753,9 +808,16 @@ function M.new(bridge,report,backend)
     local n=u32(watch(progression+0x1ce0,4),0);assert(n>=1 and n<=4096,'offer bounds rejected')
     local entries=watch(progression+0xb9ce4,n*24)
     ctx.progression,ctx.progression_count,ctx.progression_entries=progression,n,entries
-    for i=0,n-1 do
-     local offer,kit=u32(entries,i*24+4),u32(entries,i*24+8)
-     if offer~=0 then if offers[offer]and offers[offer]~=kit then offers[offer]=false elseif offers[offer]==nil then offers[offer]=kit end end
+    -- Reuse only the decoding of byte-identical, freshly read evidence.
+    -- Keep the bytes in this observation's watch set and recheck them below.
+    if offer_cache and offer_cache.at==progression and offer_cache.entries==entries then
+     offers=offer_cache.offers
+    else
+     for i=0,n-1 do
+      local offer,kit=u32(entries,i*24+4),u32(entries,i*24+8)
+      if offer~=0 then if offers[offer]and offers[offer]~=kit then offers[offer]=false elseif offers[offer]==nil then offers[offer]=kit end end
+     end
+     offer_cache={at=progression,entries=entries,offers=offers}
     end
     if out.native_view_mode==0 then
      local key=offers[out.native_offer_id]
@@ -1040,6 +1102,30 @@ function M.new(bridge,report,backend)
   bridge_out.resume_update=function(t)assert(owns(t)and not active,'presentation resume lease changed');active=t;t.updating=true;return true end
   return bridge_out
  end
+ function self:input_scope()
+  local ok,result=pcall(function()
+   assert(self.phase=='ready'and code_current(),'native input scope proof unavailable')
+   local raw=read(bridge.menu_global,8);local menu=assert(pointer(raw),'menu unavailable')
+   local state=read(menu+0x4294,4);local screen=u32(state,0)
+   if screen~=5 and screen~=14 then
+    assert(read(bridge.menu_global,8)==raw and read(menu+0x4294,4)==state,'menu changed during scope check')
+    return false
+   end
+   local ctx=context(true,true)
+   if ctx==false then return false end
+   local visible=f32(ctx.bar,84)>=.95
+   local armor=u32(ctx.watch(ctx.grid+602052,4),0)==4
+   if not visible or not armor then
+    assert(ctx.unchanged()and code_current(),'native input scope changed');return false
+   end
+   local descriptor=ctx.watch(ctx.grid-0x6d0+0x178c88,16)
+   local normal=u32(descriptor,0)==0 and descriptor:byte(7)==0 and u32(descriptor,12)==0
+   assert(ctx.unchanged()and code_current(),'native input scope changed')
+   return visible and armor and normal
+  end)
+  if not ok then return nil,tostring(result)end
+  return result
+ end
  function self:consume_select()
   local ok,result=pcall(function()
    local calls=prepared();assert(calls.executable(targets.consume),'input target not executable')
@@ -1051,6 +1137,82 @@ function M.new(bridge,report,backend)
   return true
  end
  self.consume=self.consume_select
+ function self:idle_menu()
+  local ok,result=pcall(function()
+   assert(self.phase=='ready'and code_current(),'native menu proof unavailable')
+   local slot=read(bridge.menu_global,8);local menu=assert(pointer(slot),'menu unavailable')
+   local state=read(menu+0x4294,32)
+   assert(read(bridge.menu_global,8)==slot and read(menu+0x4294,32)==state,'menu changed')
+   return u32(state,0)==0 and u32(state,4)==0 and u32(state,28)==0
+  end)
+  if not ok then return nil,tostring(result)end;return result
+ end
+ -- Startup refresh uses the already-proven native player armor setter. It
+ -- changes only the live request; the persisted game profile retains its
+ -- ordinary carrier ID throughout the temporary switch and restoration.
+ function self:player_refresh_bridge(player,catalog,data_bridge,scene_guard)
+  local ok,result=pcall(function()
+   local info=targets.deployment_commit
+   assert(self.phase=='ready'and info and code_current(),'native player armor setter unavailable')
+   assert(info.profile_global==data_bridge.armor_catalog and data_bridge.verify(),
+    'native armor manager proof differs')
+   assert(type(scene_guard)=='function','startup scene guard required')
+   local observations=setmetatable({},{__mode='k'})
+   local function guard()
+    return code_current()and data_bridge.verify()and self:idle_menu()==true and scene_guard()==true
+   end
+   local out={capabilities={commit_verified=true,cache_layout_verified=true}}
+   function out.snapshot()
+    if not guard()then return nil,'startup restoration requires an idle ship'end
+    local actor,why=player:sample();if not actor then return nil,why end
+    local slot=read(info.profile_global,8);local manager=assert(pointer(slot),'armor manager unavailable')
+    local other={}
+    for _,v in ipairs({actor.request,actor.current})do
+     other[#other+1]=table.concat({v.body_type,v.helmet_id,v.cape_id},'|')
+    end
+    local pending=other[1]~=other[2]
+    local state={session=tostring(actor.session_key),other_key=table.concat(other,'|'),pending_nonarmor=pending,
+     controller_armor_id=actor.request_armor_id,profile_armor_id=actor.request_armor_id,
+     request_armor_id=actor.request_armor_id,cache_armor_id=actor.cache_armor_id,cache_passive=actor.cache_passive_enum}
+    local expected={};for k,v in pairs(state)do expected[k]=v end
+    assert(guard()and actor.verify()and read(info.profile_global,8)==slot,'startup actor changed')
+    observations[state]={actor=actor,slot=slot,manager=manager,expected=expected};return state
+   end
+   function out.verify(state)
+    local saved=observations[state];if not saved or not guard()then return false end
+    for k,v in pairs(saved.expected)do if state[k]~=v then return false end end
+    for k,v in pairs(state)do if saved.expected[k]~=v then return false end end
+    return read(info.profile_global,8)==saved.slot and saved.actor.verify()==true
+   end
+   function out.verify_owned(ids)return catalog.verify_owned(ids)==true end
+   function out.owned_armors()
+    local ids={};for id,owned in pairs(catalog.owned)do if owned then ids[#ids+1]=id end end;return ids
+   end
+   function out.commit_owned(id,state)
+    local saved=observations[state]
+    assert(saved and out.verify(state),'startup actor changed before native request')
+    local record=catalog.records[id]
+    assert(record and record.category==0 and catalog.owned[id]and catalog.verify_owned({id}),
+     'startup armor ownership changed')
+    local calls=prepared()
+    assert(calls.executable(info.entry)and type(calls.deployment_commit)=='function','native armor setter unavailable')
+    assert(calls.deployment_commit(info.entry,saved.manager,saved.actor.local_player_id,record.item_id)~=false,
+     'native startup armor request failed')
+    local after,why=player:sample();assert(after,why)
+    assert(after.session_key==saved.actor.session_key and after.request_armor_id==id,
+     'startup armor request readback differs')
+    for _,part in ipairs({'request','current'})do
+     for _,key in ipairs({'body_type','helmet_id','cape_id'})do
+      assert(after[part][key]==saved.actor[part][key],'startup request changed other equipment')
+     end
+    end
+    assert(guard()and read(info.profile_global,8)==saved.slot,'startup context changed during native request')
+    return true
+   end
+   return out
+  end)
+  if not ok then return nil,tostring(result)end;return result
+ end
  function self:position(snapshot,x,y)
   local ok,result=pcall(function()
    assert(not movement,'restore the previous grid move first')
@@ -1566,21 +1728,36 @@ function M.new(bridge,report,backend)
  -- cache. Do not re-enter native Apply or restart the appearance preview.
  function self:equipment_feedback(id,catalog_result)
   local ok,result=pcall(function()
-   assert(targets.equip_state and targets.equip_sound and code_current(),'native Equip feedback unavailable')
+   local audio=targets.equipment_audio
+   assert(targets.equip_state and audio and code_current(),'native Equip feedback unavailable')
    local calls=prepared()
-   assert(type(calls.button_state)=='function'and type(calls.ui_sound)=='function'
-    and calls.executable(targets.equip_state)and calls.executable(targets.equip_sound),'native Equip feedback backend unavailable')
+   assert(type(calls.button_state)=='function'and type(calls.equipment_sound)=='function'
+    and calls.executable(targets.equip_state)and calls.executable(audio.entry),'native Equip feedback backend unavailable')
    local committed,why=self:commit_snapshot(catalog_result);assert(committed,why)
    assert(committed.profile_armor_id==id and committed.controller_armor_id==id
     and not committed.pending_nonarmor,'armor changed before Equip feedback')
    local ctx=detail_context();local button=ctx.detail_widget+0x49f0
    local kit=ident(u32(ctx.watch(ctx.detail_widget+0x20640+0xdc0,4),0))
    assert(kit==id and catalog_result.verify_owned({id})==true,'selected armor changed before Equip feedback')
-   local state=ctx.watch(button+0x47b8,4);local event=u32(ctx.watch(button+0x47c8,4),0)
-   assert(event and event~=0 and event~=0xffffffff,'native Equip sound event unavailable')
-   local press=ctx.watch(button+0x47b2,6);local progress=f32(press,2)
-   assert(finite(progress),'native Equip progress unavailable')
-   local native_completion=press:byte(1)==0 and press:byte(2)~=0 and progress>=1
+   local state=ctx.watch(button+0x47b8,4)
+   local offer=u32(ctx.watch(ctx.detail_widget+0xbe00c,4),0)
+   assert(offer and offer~=0 and audio.offers_global==progression_global,'native equipment sound offer unavailable')
+   local progression=assert(pointer(ctx.watch(progression_global,8)),'native audio progression unavailable')
+   local offer_count=u32(ctx.watch(progression+0x1ce0,4),0)
+   assert(offer_count>=1 and offer_count<=4096,'native audio offer bounds rejected')
+   local offers=ctx.watch(progression+0xb9ce4,offer_count*24);local matched=false
+   for i=0,offer_count-1 do if u32(offers,i*24+4)==offer then
+    assert(ident(u32(offers,i*24+8))==id,'native audio offer points to another item');matched=true
+   end end
+   assert(matched,'native audio offer has no item mapping')
+   local catalog=assert(pointer(ctx.watch(audio.catalog_global,8)),'native audio catalog unavailable')
+   local header=ctx.watch(catalog,12);local entries,count=pointer(header),u32(header,8)
+   local record=catalog_result.records[id]
+   assert(entries and count>0 and count<=4096 and record and record.slot_address
+    and record.slot_address>=entries and record.slot_address<entries+count*8
+    and (record.slot_address-entries)%8==0 and pointer(ctx.watch(record.slot_address,8))==record.address
+    and ident(u32(ctx.watch(record.address,4),0))==id and u32(ctx.watch(record.address+40,4),0)==0,
+    'native equipment audio category is not the verified body armor')
    local profile=ctx.watch(ctx.profile_address,ctx.profile_size)
    assert(ctx.unchanged()and self:verify_commit(committed)and code_current(),'Equip feedback context changed')
    if u32(state,0)==6 then return {status='native_equipped_feedback_already_set',sound_played=false}end
@@ -1589,9 +1766,7 @@ function M.new(bridge,report,backend)
    assert(current.owner==ctx.owner and current.grid==ctx.grid and code_current()
     and read(ctx.profile_address,ctx.profile_size)==profile and u32(read(button+0x47b8,4),0)==6,
     'native equipped button readback differs')
-   if not native_completion then
-    assert(calls.ui_sound(targets.equip_sound,event)~=false,'native equip sound rejected')
-   end
+   assert(calls.equipment_sound(audio.entry,ctx.grid,offer)~=false,'native equipment sound rejected')
    return {status='native_equipped_feedback_verified',sound_played=true}
   end)
   if not ok then return nil,tostring(result)end;return result

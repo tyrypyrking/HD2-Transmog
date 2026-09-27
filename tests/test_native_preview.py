@@ -160,3 +160,27 @@ end
 local shown,why=g:preview_kit('armor:00001234',catalog,{focus_index=17})
 assert(shown and focus==1 and calls==1,why)
 ''')
+
+
+def test_input_capture_scope_excludes_hidden_parent_and_other_equipment_menus():
+    run(r'''
+put(manager+0x178c88+12,b(0,4)) -- Live body-armor category (the broad preview fixture uses 1).
+local g=resolved();assert(g:input_scope()==true)
+put(grid+272+84,f(0));assert(g:input_scope()==false)
+put(grid+272+84,f(1));put(grid+602052,b(5,4));assert(g:input_scope()==false)
+put(grid+602052,b(4,4));put(manager+0x178c88,b(1,4));assert(g:input_scope()==false)
+put(manager+0x178c88,b(0,4));put(menu+0x4294,b(0,4));assert(g:input_scope()==false)
+put(menu+0x4294,b(5,4));assert(g:input_scope()==true)
+put(base+preview_rva,'X');assert(g:input_scope()==nil)
+''')
+
+
+def test_helmet_and_cape_categories_do_not_poll_or_capture_armor_input():
+    run(r'''
+put(manager+0x178c88+12,b(0,4)) -- Live body-armor category (the broad preview fixture uses 1).
+local g=resolved();assert(g:input_scope()==true)
+for _,category in ipairs({1,2})do
+ put(manager+0x178c88+12,b(category,4));assert(g:input_scope()==false)
+end
+put(manager+0x178c88+12,b(0,4));assert(g:input_scope()==true)
+''')

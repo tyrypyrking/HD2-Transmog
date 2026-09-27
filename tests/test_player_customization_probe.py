@@ -56,3 +56,25 @@ local reads=0;bridge.read=function(at,n)
 end
 assert(not observer:sample())
 ''')
+
+
+def test_creator_body_type_does_not_depend_on_cached_passive_or_equipment_ids():
+ run(r'''
+put(manager+0x96c+136+0x3c,word(0xffffffff))
+put(manager+0x96c+136+4,word(0xffffffff))
+assert(not observer:sample(),'Apply must still reject unverified equipment/passive')
+local body=assert(observer:sample_body_type())
+assert(body.body_type==0 and body.request_body_type==0 and body.verify())
+put(manager+0x96c+136,word(1))
+assert(not body.verify())
+assert(observer:sample_body_type().body_type==1)
+put(manager+0x96c+136,word(2));assert(not observer:sample_body_type())
+''')
+
+
+def test_creator_body_read_still_rejects_changed_identity_and_compatibility():
+ run(r'''
+local body=assert(observer:sample_body_type())
+put(player+8,word(123));assert(not body.verify()and not observer:sample_body_type())
+put(player+8,word(0xfffffffd));valid=false;assert(not observer:sample_body_type())
+''')

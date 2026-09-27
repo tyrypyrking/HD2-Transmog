@@ -155,3 +155,54 @@ assert(not ok and commits==0 and armor_assignments==2)
 assert(read(owner+0x10+0x12c,4)==b(0x5678,4))
 assert(why:find('recovery refused or unverified',1,true)and why:find('Equipment recovery failed',1,true))
 ''', commit=True)
+
+
+def test_startup_refresh_uses_native_player_setter_without_menu_or_persistent_profile_writes():
+    run(r'''
+put(menu+0x4294,string.rep('\0',32))
+local A,B='armor:00001234','armor:00005678'
+local actor={session_key={},local_player_id=5,request_armor_id=A,cache_armor_id=A,cache_passive_enum=7,
+ request={body_type=0,helmet_id='helmet',cape_id='cape'},current={body_type=0,helmet_id='helmet',cape_id='cape'}}
+local player={sample=function()
+ local out={};for k,v in pairs(actor)do out[k]=v end
+ local id=actor.request_armor_id;out.verify=function()return actor.request_armor_id==id end
+ return out
+end}
+local scene=true
+local data={armor_catalog=base+0x50048,verify=function()return true end}
+local parent_profile=read(owner+0x10,0x140)
+backend.deployment_commit=function(at,profile,player_id,item)
+ assert(at==base+0x19000 and profile==settings and player_id==5 and item==0x5678)
+ commits=commits+1;actor.request_armor_id=B;return true
+end
+local runtime,why=g:player_refresh_bridge(player,catalog,data,function()return scene end)
+assert(runtime,why)
+local state=assert(runtime.snapshot());assert(runtime.verify(state))
+assert(runtime.commit_owned(B,state))
+assert(commits==1 and armor_assignments==0 and read(owner+0x10,0x140)==parent_profile)
+assert(not runtime.verify(state))
+local current=assert(runtime.snapshot());assert(current.profile_armor_id==B and current.cache_armor_id==A)
+scene=false;assert(not runtime.verify(current)and not runtime.snapshot())
+''',commit=True)
+
+
+def test_startup_setter_refuses_manager_mismatch_or_open_menu():
+    run(r'''
+local data={armor_catalog=base+0x50040,verify=function()return true end}
+assert(not g:player_refresh_bridge({},catalog,data,function()return true end))
+data.armor_catalog=base+0x50048
+local runtime=assert(g:player_refresh_bridge({},catalog,data,function()return true end))
+assert(not runtime.snapshot(),'an open Equipment menu must block startup changes')
+assert(commits==0 and armor_assignments==0)
+''',commit=True)
+
+
+def test_inactive_deployment_picker_is_outside_input_scope_not_a_capture_failure():
+    run(r'''
+put(grid-0x6d0+0x178c88,string.rep('\0',16))
+assert(g:input_scope()==true)
+put(owner+0x2818,b(0,4));assert(g:input_scope()==false)
+assert(not g:snapshot(),'normal native operations must still reject inactive equipment')
+put(owner+0x2818,b(3,4));assert(g:input_scope()==true)
+put(manager+0x62a0,b(0,4));assert(g:input_scope()==false)
+''')

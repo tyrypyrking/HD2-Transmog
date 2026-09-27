@@ -231,3 +231,31 @@ local input={x=500,y=950,down=true,confirm_down=true}
 consumed=false;assert(flow:before(input));assert(consumed)
 assert(applied==0 and persisted==0)
 ''')
+
+
+def test_hidden_picker_releases_all_input_ownership_to_parent_menu():
+    run_lua(APPLY_FIXTURE+r'''
+local active=true
+host.input_scope=function()return active end
+assert(flow:action{type='select_variant',label='Existing'});ready()
+assert(frame(1800,130,true)and consumed)
+active=false
+assert(frame(900,500,false)and not consumed and applied==0)
+assert(frame(900,500,true)and not consumed)
+assert(frame(900,500,false)and not consumed and applied==0)
+active=true
+assert(frame(0,0,false));assert(frame(1800,130,true));assert(frame(1800,130,false))
+assert(applied==1)
+''')
+
+
+def test_hidden_picker_never_polls_expensive_native_input():
+    run_lua(APPLY_FIXTURE+r'''
+local active=false;local polls=0
+host.input_scope=function()return active end
+local function sample()polls=polls+1;return {x=0,y=0,down=false}end
+assert(flow:action{type='select_variant',label='Existing'});ready()
+for i=1,300 do assert(flow:before(sample))end
+assert(polls==0)
+active=true;assert(flow:before(sample));assert(polls==1)
+''')

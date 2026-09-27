@@ -1001,3 +1001,17 @@ assert(not region('apply_variant'))
 assert(act('cancel'));texts={};rects={};assert(draw())
 assert(not panel:capture(1540,20)and not panel:capture(1880,20))
 ''')
+
+
+def test_empty_stats_explains_failure_and_redraws_when_status_changes():
+    run_lua(FIXTURE+RENDER_FIXTURE+r'''
+context.stats_profiles={}
+assert(act('open'));assert(act('select_look','look-b'));assert(draw())
+local before=created
+context.stats_status='player_unavailable';texts={};assert(draw()and created>before)
+local joined={};for _,t in ipairs(texts)do joined[#joined+1]=t.value end
+assert(table.concat(joined,' '):find('Player body type is unavailable',1,true))
+before=created;context.stats_status='unavailable';texts={};assert(draw()and created>before)
+joined={};for _,t in ipairs(texts)do joined[#joined+1]=t.value end
+assert(table.concat(joined,' '):find('Base stats could not be verified',1,true))
+''')

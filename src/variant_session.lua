@@ -22,6 +22,7 @@ function M.new(host)
  assert(type(settle)=='number'and settle>=0 and settle<=2000,'invalid preview settling delay')
  assert(type(samples)=='number'and samples%1==0 and samples>=1 and samples<=10,'invalid preview observation count')
  local next_preview_at=0
+ local background=false
  local function report(key,value)if host.report then host.report(key,value)end end
  local function reset()
   if not patch then return true end
@@ -79,9 +80,24 @@ function M.new(host)
   if selection.native_override then committed=nil
   else committed={label=selection.label,request=copy(selection.request),target_id=selection.plan.target_id}end
  end
+ local function currently_equipped(selection)
+  if not(selection and not selection.native_override and committed and same(selection.request,committed.request)
+   and patch and patch:is_active()==true and host.player)then return false end
+  local actor=host.player();local passive=host.catalog().context.passive_variants[selection.request.passive_variant_id]
+  return actor and passive and actor.request_armor_id==committed.target_id
+   and actor.cache_armor_id==committed.target_id and actor.cache_passive_enum==passive.enum or false
+ end
  function self:busy()return refresh~=nil end
  function self:has_committed()return committed~=nil end
  function self:is_active()return patch and patch:is_active()~=false or false end
+ function self:restoring()return background end
+ function self:abandon_restore(reason)
+  if not background then return end
+  -- Never reset possibly worn data after an uncertain native outcome. Keep
+  -- any patch journal for the next explicit, guarded equipment change.
+  background=false;refresh=nil;refresh_previous=nil;selected=nil;preview=nil;pending=nil
+  self.phase='idle';self.restore_status='failed';notice=tostring(reason)
+ end
  function self:verify_composition(id)
   return applied_plan~=nil and applied_plan.target_id==id and patch~=nil and patch:is_active()==true
  end
@@ -127,7 +143,7 @@ function M.new(host)
   end
   local catalog=host.catalog();local passive=catalog.context.passive_variants[selected.request.passive_variant_id]
   if not(passive and type(passive.enum)=='number')then return reject('The selected passive is unavailable.')end
-  local coordinator,reason=host.new_refresh();if not coordinator then return reject(reason or 'Native armor Apply is unavailable.')end
+  local coordinator,reason=host.new_refresh(background);if not coordinator then return reject(reason or 'Native armor Apply is unavailable.')end
   local plan=selected.plan
   local previous=applied_plan and copy(applied_plan.request)
   local needs_preparation=not selected.native_override or patch~=nil
@@ -147,9 +163,20 @@ function M.new(host)
    donor_ids={plan.source_id,plan.stats_source_id,plan.passive_source_id},timeout_ms=5000,mutation_ids=mutations,
    prepare_target=prepare_target,accept_current=not needs_preparation},now)
   if not began then return reject(why or 'Native armor Apply could not begin.')end
+  if host.before_apply then
+   local ok,error=host.before_apply(background);if not ok then return reject(error)end
+  end
   refresh=coordinator;refresh_previous=previous;self.phase='applying';notice=nil
   report('variant.apply_kind',selected.native_override and 'original'or 'saved')
   report('variant.apply',selected.label or plan.target_id);return true
+ end
+ function self:restore(label,request,now)
+  if refresh or patch or selected or pending or preview then return nil,'startup restoration requires an idle session'end
+  local plan,why=metadata(request);if not plan then return nil,why end
+  selected={label=label,request=plan.request,plan=plan};self.phase='ready';left=false;background=true;self.restore_status='applying'
+  local ok,error=self:apply(now)
+  if not ok then background=false;selected=nil;self.phase='idle';self.restore_status='failed' end
+  return ok,error
  end
  function self:step(now)
   if refresh then
@@ -157,6 +184,15 @@ function M.new(host)
    local phase,evidence=refresh:step(now)
    if phase=='complete'then
     remember(selected);refresh=nil;refresh_previous=nil;self.phase='equipped';notice=nil
+    if host.persist_equipped then
+     local called,ok,why=pcall(host.persist_equipped,selected.native_override and nil or selected.label,
+      selected.native_override and nil or selected.request)
+     if not called or not ok then report('variant.persistence_failed',called and why or ok)end
+    end
+    if background then
+     background=false;selected=nil;self.phase='idle';self.restore_status='complete'
+     report('variant.restored',evidence.status);return
+    end
     if selected.native_override and host.restore_focus then
      local restored,why=host.restore_focus(selected.request.appearance_id,selected.focus_index)
      if not restored then
@@ -188,6 +224,10 @@ function M.new(host)
     end
     notice=evidence and evidence.reason or 'Armor refresh could not be verified.'
     self.phase='apply_failed';report('variant.apply_failed',notice)
+    if background then
+     background=false;refresh=nil;refresh_previous=nil;selected=nil;self.phase='idle';self.restore_status='failed'
+     report('variant.restore_failed',notice);return
+    end
     if not refresh.needs_recovery then refresh=nil;refresh_previous=nil end
    end
    return
@@ -203,7 +243,7 @@ function M.new(host)
    local id=preview.target
    if not preview.sent_at then
     report('variant.preview.begin',id..':target')
-    local done,why=host.preview_variant(selected.request,true,selected.label,selected.focus_index)
+    local done,why=host.preview_variant(selected.request,not currently_equipped(selected),selected.label,selected.focus_index)
     report('variant.preview.end',id..':target:'..tostring(done and 'ok'or why))
     if not done then
      preview=nil;pending=nil;self.phase='preview_failed';notice=tostring(why)
@@ -220,7 +260,7 @@ function M.new(host)
     preview.samples=preview.samples+1;preview.stable_at=preview.stable_at or now
    else preview.samples=0;preview.stable_at=nil end
    if preview.samples<samples or not preview.stable_at or now-preview.stable_at<settle then return end
-   preview=nil;next_preview_at=now+settle;self.phase=pending and 'previewing'or 'ready'
+   preview=nil;next_preview_at=now+settle;self.phase=pending and 'previewing'or currently_equipped(selected)and 'equipped'or 'ready'
    notice=not pending and selected.block_reason or nil
    report('variant.native_details',selected.label or selected.plan.target_id)
   elseif not pending and selected and(self.phase=='ready'or self.phase=='equipped')then
@@ -279,6 +319,9 @@ function M.new(host)
     and player.request_armor_id~=committed.target_id and player.cache_armor_id~=committed.target_id then
     local ok,why=reset();if not ok then return nil,why end
     committed=nil
+    if host.persist_equipped then
+     local ok,why=host.persist_equipped(nil);if not ok then report('variant.persistence_failed',why)end
+    end
    end
   end
   selected=nil;self.phase='idle';left=true;return true

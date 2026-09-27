@@ -22,7 +22,7 @@ DESCRIPTION = ('Owned armor variants with independent appearance, base stats and
 
 def bundle():
     chunks = ['-- HD2-Addon: ' + NAME + '\n']
-    for variable, filename in [('State','state.lua'), ('Platform','platform.lua'),
+    for variable, filename in [('State','state.lua'), ('EquippedState','equipped_state.lua'), ('ControllerInput','controller_input.lua'), ('Platform','platform.lua'),
                                ('AppearanceRegistry','appearance_registry.lua'),
                                ('CompatSpec','compat_spec.lua'),
                                ('CatalogCompat','catalog_compat.lua'),
@@ -69,7 +69,7 @@ def bundle():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--release-tag', help='Require a release tag matching the runtime version (for example v0.1.1).')
+    parser.add_argument('--release-tag', help='Require a release tag matching the runtime version (for example v0.1.2).')
     args = parser.parse_args()
     if args.release_tag is not None and args.release_tag not in (VERSION, 'v'+VERSION):
         parser.error(f'release tag must be {VERSION} or v{VERSION}; got {args.release_tag!r}')
@@ -105,9 +105,14 @@ def main():
         'Base-stat choices exclude donor passive bonuses and are sorted by armor rating.\n'
         'Create saves locally and does not equip or change the worn armor.\n'
         'Select a saved card to preview its look in the original stat/perk panels.\n'
-        'Click the native Apply button with the mouse to equip the selected saved variant.\n'
+        'Click Apply or press and release controller A (XInput/Steam Input) on a ready selected armor.\n'
+        '0.1.2: controller A confirmation, parent-menu input fix, and creator base stats independent of the worn passive cache.\n'
+        'Reduced Armor-menu processing and disconnected-controller polling; fresh ownership and equip checks remain enabled.\n'
+        'Equip a variant once on this build to remember it for future launches. Restoration waits for verified idle-ship context.\n'
+        'Unknown, removed or unowned variants are skipped; the game save retains ordinary armor IDs when the mod is removed.\n'
         '0.1.1: centered ultrawide layout, aligned click regions, green Equipped feedback, and native Helmet/Cape tab clicks.\n'
-        'Known issues: equip audio differs from the normal game sound; keyboard/controller confirmation is not supported reliably.\n'
+        'Equipment audio uses the vanilla item/category and menu-context sound routine.\n'
+        'Known limits: keyboard confirmation and non-XInput controllers are not covered.\n'
         'Apply keeps the old carrier intact until the native request/cache have switched away, then composes and equips.\n'
         'Catalog discovery warms before entry; bounded batch reads reduce section-loading work.\n'
         'Native cache confirmation is not proof of streaming completion or combat behavior. See README.md for validation limits.\n'

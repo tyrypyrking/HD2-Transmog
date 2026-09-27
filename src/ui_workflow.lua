@@ -27,6 +27,22 @@ function M.new(state_api,wizard_api,panel,host)
  local self={};local previous,armed,release_latch,last_view=nil,nil,false,nil
  local selected_variant
  local native_navigation=false
+ local confirm_previous,confirm_source,confirm_armed
+ local function clear_confirm()confirm_previous=nil;confirm_source=nil;confirm_armed=nil end
+ local function confirm_action(view)
+  if view.open or view.native_details~=true or view.can_apply~=true or view.apply_pending==true then return nil end
+  local action
+  if view.native_override==true and view.native_override_id then
+   action={type='apply_variant',id=view.native_override_id}
+  elseif view.selected_variant then
+   action={type='apply_variant',label=view.selected_variant.label}
+  end
+  if action and host.validate_confirm then
+   local ok,valid=pcall(host.validate_confirm,action)
+   if not ok or valid~=true then return nil end
+  end
+  return action
+ end
  local function consume()
   if type(host.consume_select)~='function'then return false end
   local ok,captured,reason=pcall(host.consume_select)
@@ -35,6 +51,7 @@ function M.new(state_api,wizard_api,panel,host)
  local function context()
   local domain,display=host.current();assert(domain and display,'current owned UI context required');return domain,display
  end
+ function self:is_open()return wizard:is_open()end
  function self:view()
   local domain,display=context();local view=wizard:view(domain,display)
   view.native_picker=host.native_picker==true
@@ -53,7 +70,16 @@ function M.new(state_api,wizard_api,panel,host)
   return view
  end
  function self:before(input)
-  local view=self:view()
+  if host.input_scope and host.input_scope()==false then
+   panel:clear();previous=nil;armed=nil;release_latch=false;native_navigation=false;clear_confirm()
+   return true
+  end
+  -- Poll native input only while this UI owns an active Armor picker. XInput
+  -- device discovery can be expensive even when no controller is connected.
+  if type(input)=='function'then input=input()end
+  if not input then clear_confirm();previous=nil;armed=nil end
+  if input and confirm_source and input.controller_source~=confirm_source then clear_confirm()end
+  local open=wizard:is_open()
   -- Native tabs own their entire mouse gesture, including release. A saved
   -- selection's continuous confirmation guard must not swallow unrelated UI.
   -- A drag begun on our controls never acquires navigation passthrough.
@@ -78,13 +104,13 @@ function M.new(state_api,wizard_api,panel,host)
    prefix_capture=not ok or value==true
    check_failed=not ok
   end
-  if prefix_capture or (view.open and held(input))then release_latch=true end
+  if prefix_capture or (open and held(input))then release_latch=true end
   -- Consume the game's generic Select while creation is open. Native look
   -- selection is routed explicitly through a separately proved thumbnail hit.
   -- The OS button remains available to this controller's own hit testing.
-  if view.open or release_latch then
+  if open or release_latch then
    local captured,reason=consume()
-   if not captured then armed=nil;panel:clear();return nil,'Native input capture is unavailable: '..tostring(reason or 'capture rejected')end
+   if not captured then armed=nil;clear_confirm();panel:clear();return nil,'Native input capture is unavailable: '..tostring(reason or 'capture rejected')end
    -- Keep the capture through drag-off, focus loss, and confirmation release.
    -- A fresh host capture request wins over a neutral mouse-only sample.
    if not prefix_capture and released(input)then release_latch=false end
@@ -119,7 +145,7 @@ function M.new(state_api,wizard_api,panel,host)
    return host.apply_variant()
   end
   if action and action.type=='select_native_look'then
-   if wizard:view(domain,display).open then return nil,'Native browsing is unavailable while the creator is open' end
+   if wizard:is_open()then return nil,'Native browsing is unavailable while the creator is open' end
    if domain.ownership_verified~=true or not(domain.owned and domain.owned[action.id]==true
     and domain.catalog and type(domain.catalog[action.id])=='table')then
     return nil,'Choose a currently owned native armor'
@@ -165,7 +191,30 @@ function M.new(state_api,wizard_api,panel,host)
  function self:draw(sample,input)
   local domain,display=context();last_view=self:view()
   local shown=panel:draw(sample,last_view,display)
-  if not shown or not input then previous=nil;armed=nil;return shown end
+  if not shown or not input then previous=nil;armed=nil;clear_confirm();return shown end
+  -- A confirms the current semantic selection, never whatever is under the
+  -- mouse cursor. Require a neutral sample from the same device before arming.
+  if type(input.confirm_down)=='boolean'and type(input.controller_source)=='string'then
+   local target=(input.confirm_down or confirm_previous==true)and confirm_action(last_view)or nil
+   if confirm_source~=input.controller_source or confirm_previous==nil then
+    confirm_source=input.controller_source;confirm_armed=nil
+   elseif input.down or previous==true or armed then
+    confirm_armed=nil
+   elseif input.confirm_down and not confirm_previous then
+    confirm_armed=target and {key=action_key(target),action=target}or nil
+   elseif input.confirm_down and confirm_previous then
+    if not target or not confirm_armed or confirm_armed.key~=action_key(target)then confirm_armed=nil end
+   elseif not input.confirm_down and confirm_previous then
+    local action=confirm_armed and target and confirm_armed.key==action_key(target)and target
+    confirm_armed=nil
+    if action then
+     local ok,why=self:action(action)
+     if not ok and host.notice then host.notice(why)end
+     if ok and host.controller_confirmed then host.controller_confirmed(input.controller_source)end
+    end
+   end
+   confirm_previous=input.confirm_down
+  else clear_confirm()end
   if previous==nil then previous=input.down;return true end
   local target=panel:hit(input.x,input.y)
   -- The host captures original-grid presses before native update and returns
@@ -206,10 +255,10 @@ function M.new(state_api,wizard_api,panel,host)
  function self:leave()
   local domain,display=host.current()
   if domain and display then wizard:action(domain,display,{type='cancel'})end
-  panel:clear();previous=nil;armed=nil;last_view=nil;selected_variant=nil;native_navigation=false
+  panel:clear();previous=nil;armed=nil;last_view=nil;selected_variant=nil;native_navigation=false;clear_confirm()
   if host.end_creation then host.end_creation()end
  end
- function self:clear()panel:clear();previous=nil;armed=nil end
+ function self:clear()panel:clear();previous=nil;armed=nil;clear_confirm()end
  function self:clear_selected_variant()selected_variant=nil;return true end
  function self:automation_snapshot()
   return {view=self:view(),regions=panel.regions or {}}

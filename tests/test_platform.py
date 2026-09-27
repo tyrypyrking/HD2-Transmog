@@ -458,3 +458,19 @@ assert(p.now() == 987654321, 'now=' .. tostring(p.now()))
 return 'OK'
 '''
     assert "OK" in env.run(snippet)
+
+
+def test_controller_a_works_with_cursor_outside_but_never_without_focus(env):
+    out = env.run('''
+local buttons=0
+N.read_controller=function(index)if index==0 then return buttons end end
+local p=P.new(loader,E,N)
+N.cursor.x=-50
+local s=p.sample_input();assert(s and s.x==-1 and not s.down and s.confirm_down==false)
+buttons=4096;s=p.sample_input();assert(s.confirm_down and s.controller_source=='XInput0')
+N.fg_pid=123;assert(p.sample_input()==nil)
+N.fg_pid=N.own_pid;buttons=nil
+assert(p.sample_input()==nil,'disconnected pad must not allow outside-cursor input')
+return 'OK'
+''', engine=(1920,1080,False))
+    assert 'OK' in out

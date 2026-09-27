@@ -202,9 +202,30 @@ function M.new(state_api, policy)
   return setmetatable({_state=state_api, _step=0, _allow_create=not policy or policy.allow_create~=false}, Wizard)
 end
 
+function Wizard:is_open()
+  return self._step > 0
+end
+
+-- Opt-in display cache: the host replaces ownership/catalog tables and bumps
+-- this revision whenever display metadata changes in place. Action validation
+-- always builds fresh options below; cached display data never authorizes equip.
+local function view_options(self, domain, context)
+  local revision=context.options_revision
+  if type(revision)~='number' then return options(domain,context) end
+  local cached=self._options
+  if not cached or cached.revision~=revision or cached.context~=context
+    or cached.catalog~=domain.catalog or cached.owned~=domain.owned
+    or cached.verified~=domain.ownership_verified then
+    cached={revision=revision,context=context,catalog=domain.catalog,owned=domain.owned,
+      verified=domain.ownership_verified,model=options(domain,context)}
+    self._options=cached
+  end
+  return cached.model
+end
+
 function Wizard:view(domain, context)
   context = context or {}
-  local model = options(domain, context)
+  local model = view_options(self, domain, context)
   local tiles = {}
   for _, name in ipairs(keys(domain.presets)) do
     local request = domain.presets[name]
@@ -221,7 +242,13 @@ function Wizard:view(domain, context)
   local selected = self._draft or {}
   local active_options = self._step == 1 and model.looks or self._step == 2 and model.stats
     or self._step == 3 and model.passives or {}
-  for _, choice in ipairs(active_options) do
+  local displayed_options={}
+  for _, source in ipairs(active_options) do
+    local choice={};for key,value in pairs(source)do choice[key]=value end
+    if self._step==1 then
+      choice.preview=context.appearance_previews and context.appearance_previews[choice.id]
+    end
+    displayed_options[#displayed_options+1]=choice
     choice.selected = choice.id == (self._step == 1 and selected.appearance_id
       or self._step == 2 and selected.stats_tuple_id or selected.passive_variant_id)
   end
@@ -229,13 +256,17 @@ function Wizard:view(domain, context)
     section={title='Custom Variant', before='Light Armor', tiles=tiles},
     open=self._step > 0, step=self._step,
     title=({'Choose a look', 'Choose base stats', 'Choose a passive'})[self._step],
-    options=active_options, selection=triple(selected), stats_tuple_id=selected.stats_tuple_id,
+    options=displayed_options, selection=triple(selected), stats_tuple_id=selected.stats_tuple_id,
     label=self._label, can_back=self._step > 1 and not self._pending,
     can_cancel=self._step > 0 and not self._pending,
     can_create=self._step == 3 and not self._pending and valid_label == true
       and #tiles <= capacity(context) and draft_valid(self, model) or false,
     saving=self._pending ~= nil, ownership_verified=fresh(domain),
     unresolved_stats_count=model.unresolved,
+    empty_options_notice=self._step==2 and #active_options==0 and
+      (context.stats_status=='unavailable'and 'Base stats could not be verified. Reopen Armor; if this persists, include STATUS.txt and HD2Transmog.log in your report.'
+       or context.stats_status=='player_unavailable'and 'Player body type is unavailable. Return to the ship and reopen Armor.'
+       or 'Verifying owned base stats. If this persists, reopen Armor and check the diagnostics.')or nil,
     stats_notice=model.unresolved > 0 and 'Some owned base stats are awaiting verification.' or nil,
     label_error=self._step > 0 and not valid_label and label_error or nil,
     notice=self._notice,

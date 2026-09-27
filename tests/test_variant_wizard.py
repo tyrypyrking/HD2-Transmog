@@ -304,3 +304,42 @@ assert(wizard:view(state,context).label=='Beta - Padding (2)')
 assert(act('rename',nil,'My exact name'));assert(act('select_passive','perk-b'))
 assert(wizard:view(state,context).label=='My exact name')
 ''')
+
+
+def test_display_cache_refreshes_revision_ownership_and_live_previews():
+    run_lua(FIXTURE+r'''
+context.options_revision=0
+assert(act('open'))
+local old=wizard:view(state,context)
+assert(old.options[2].label=='Beta')
+local preview={resource='new-preview'}
+context.appearance_previews['look-b']=preview
+local current=wizard:view(state,context)
+assert(current.options[2].preview==preview and old.options[2].preview~=preview)
+context.labels.appearance_id['look-b']='Beta updated'
+context.options_revision=1
+assert(wizard:view(state,context).options[2].label=='Beta updated')
+S.reconcile_owned(state,catalog,{'a'})
+current=wizard:view(state,context)
+assert(#current.options==1 and current.options[1].id=='look-a')
+assert(not act('select_look','look-b'))
+S.reconcile_owned(state,catalog,nil)
+assert(#wizard:view(state,context).options==0)
+''')
+
+
+def test_display_cache_cannot_authorize_stale_action_or_keep_old_stats():
+    run_lua(FIXTURE+r'''
+context.options_revision=0
+assert(act('open'));assert(act('select_look','look-b'))
+local before=wizard:view(state,context)
+context.stats_profiles['stats-b']=profile(51,550,125)
+context.stats_profiles['stats-c']=profile(51,550,125)
+-- Actions remain fresh even before the host publishes its display revision.
+assert(not act('select_stats','base:50/550/125'))
+context.options_revision=1
+local after=wizard:view(state,context)
+assert(after.options[1].id=='base:51/550/125')
+assert(before.options[1].id=='base:50/550/125')
+assert(act('select_stats','base:51/550/125'))
+''')

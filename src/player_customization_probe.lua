@@ -17,7 +17,7 @@ function M.new(bridge,data)
  assert(type(bridge)=='table' and type(bridge.read)=='function' and type(bridge.verify)=='function','verified read bridge required')
  assert(type(data)=='table' and type(data.kits)=='table' and type(data.passives)=='table','catalog reference required')
  local self={};local identity,session_key
- function self:sample()
+ local function sample(body_only)
   local ok,result=pcall(function()
    assert(bridge.verify(),'customization compatibility changed')
    assert(type(bridge.players)=='number','local-player signature unavailable')
@@ -52,8 +52,21 @@ function M.new(bridge,data)
    local info=assert(ptr(watch(manager+0x948+index*8,8)),'local customization entity unavailable')
    local entity=u32(watch(info+0x10,4),0)
    assert(entity~=0x7fff,'local customization entity is not live')
-   local request=watch(manager+0xa7c+index*64,16)
-   local cache=watch(manager+0x96c+index*68,68)
+   local request=watch(manager+0xa7c+index*64,body_only and 4 or 16)
+   local cache=watch(manager+0x96c+index*68,body_only and 4 or 68)
+   local function verify()
+    if not bridge.verify()then return false end
+    for _,w in ipairs(watches)do if bridge.read(w.at,#w.bytes)~=w.bytes then return false end end
+    return true
+   end
+   -- Creator base stats depend on body shape, not the currently cached gear
+   -- or passive. Keep full equipment validation strict for actual Apply.
+   if body_only then
+    local body,wanted=u32(cache,0),u32(request,0)
+    assert((body==0 or body==1)and(wanted==0 or wanted==1),'local body type unavailable')
+    assert(verify(),'customization changed during observation')
+    return {body_type=body,request_body_type=wanted,verify=verify,evidence='native_body_type_readback'}
+   end
    local function equipment(raw)
     local out={body_type=u32(raw,0)}
     assert(out.body_type==0 or out.body_type==1,'local body type unavailable')
@@ -72,11 +85,6 @@ function M.new(bridge,data)
    local same=identity~=nil
    if same then for i,v in ipairs(next_identity)do if identity[i]~=v then same=false;break end end end
    if not same then identity=next_identity;session_key={}end
-   local function verify()
-    if not bridge.verify()then return false end
-    for _,w in ipairs(watches)do if bridge.read(w.at,#w.bytes)~=w.bytes then return false end end
-    return true
-   end
    assert(verify(),'customization changed during observation')
    return {session_key=session_key,local_player_id=player_id,entity_id=entity,slot=index,
     request=requested,current=current,request_armor_id=requested.armor_id,cache_armor_id=current.armor_id,
@@ -87,6 +95,8 @@ function M.new(bridge,data)
   if not ok then return nil,tostring(result)end
   return result
  end
+ function self:sample()return sample(false)end
+ function self:sample_body_type()return sample(true)end
  return self
 end
 function M.format(result)
