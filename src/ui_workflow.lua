@@ -1,5 +1,5 @@
--- Mouse/controller orchestration. Only an explicit saved-card Apply dispatches
--- equipment work to the verified host; selecting and creating remain previews.
+-- Mouse/controller orchestration. Apply, controller confirmation and a card
+-- double-click dispatch verified equipment work; single clicks only preview.
 local M={}
 -- The platform currently reports mouse `down`. Hosts may also report held
 -- keyboard/controller confirmation as `confirm_down` or `select_down`. A nil
@@ -25,6 +25,13 @@ function M.new(state_api,wizard_api,panel,host)
  assert(type(host)=='table'and type(host.current)=='function'and type(host.persist)=='function','UI host required')
  local wizard=wizard_api.new(state_api,{allow_create=host.allow_create~=false})
  local self={};local previous,armed,release_latch,last_view=nil,nil,false,nil
+ local last_click,double_apply
+ local function clear_double()last_click=nil;double_apply=nil end
+ local function click_time()
+  if type(host.now)~='function'then return nil end
+  local ok,now=pcall(host.now)
+  if ok and type(now)=='number'and now==now and now>=0 and now<math.huge then return now end
+ end
  local selected_variant
  local native_navigation=false
  local confirm_previous,confirm_source,confirm_armed
@@ -71,13 +78,13 @@ function M.new(state_api,wizard_api,panel,host)
  end
  function self:before(input)
   if host.input_scope and host.input_scope()==false then
-   panel:clear();previous=nil;armed=nil;release_latch=false;native_navigation=false;clear_confirm()
+   panel:clear();previous=nil;armed=nil;release_latch=false;native_navigation=false;clear_confirm();clear_double()
    return true
   end
   -- Poll native input only while this UI owns an active Armor picker. XInput
   -- device discovery can be expensive even when no controller is connected.
   if type(input)=='function'then input=input()end
-  if not input then clear_confirm();previous=nil;armed=nil end
+  if not input then clear_confirm();clear_double();previous=nil;armed=nil end
   if input and confirm_source and input.controller_source~=confirm_source then clear_confirm()end
   local open=wizard:is_open()
   -- Native tabs own their entire mouse gesture, including release. A saved
@@ -91,7 +98,7 @@ function M.new(state_api,wizard_api,panel,host)
    and input.confirm_down~=true and input.select_down~=true
    and type(host.native_navigation_at)=='function'
    and host.native_navigation_at(input.x,input.y)==true then
-   native_navigation=true;release_latch=false
+   native_navigation=true;release_latch=false;clear_double()
    return true
   end
   -- Ask the host before the native update, not after a draw has observed the
@@ -119,6 +126,8 @@ function M.new(state_api,wizard_api,panel,host)
   return true
  end
  function self:action(action)
+  clear_double()
+  if host.report then host.report('ui.action',action_key(action))end
   local domain,display=context()
   if panel.handle and panel:handle(action)then return true end
   if host.allow_create==false and action and action.type~='select_variant'
@@ -191,7 +200,29 @@ function M.new(state_api,wizard_api,panel,host)
  function self:draw(sample,input)
   local domain,display=context();last_view=self:view()
   local shown=panel:draw(sample,last_view,display)
-  if not shown or not input then previous=nil;armed=nil;clear_confirm();return shown end
+  if not shown or not input then previous=nil;armed=nil;clear_confirm();clear_double();return shown end
+  -- A double-click may finish before preview readback. Wait briefly for the
+  -- same selection to become ready; never carry intent across focus/navigation.
+  if double_apply then
+   local queued=double_apply;local now=click_time()
+   local focused=true
+   if host.validate_confirm then
+    local ok,value=pcall(host.validate_confirm,queued.action);focused=ok and value==true
+   end
+   if not now or now<queued.at or now>queued.at+1500 or held(input) or last_view.open or not focused
+    or last_view.variant_phase=='preview_failed' or last_view.variant_phase=='equipped' then
+    double_apply=nil
+   else
+    local target=confirm_action(last_view)
+    if target then
+     double_apply=nil
+     if action_key(target)==action_key(queued.action)then
+      local ok,why=self:action(target)
+      if not ok and host.notice then host.notice(why)end
+     end
+    end
+   end
+  end
   -- A confirms the current semantic selection, never whatever is under the
   -- mouse cursor. Require a neutral sample from the same device before arming.
   if type(input.confirm_down)=='boolean'and type(input.controller_source)=='string'then
@@ -232,16 +263,33 @@ function M.new(state_api,wizard_api,panel,host)
    end
   end
   if input.down and not previous then
+   double_apply=nil
+   if not target or(target.type~='select_variant'and target.type~='select_native_look')then last_click=nil end
    armed=target and {key=action_key(target),action=target}or nil
    if target or (panel.capture and panel:capture(input.x,input.y))then release_latch=true end
-  elseif input.down and previous and armed and armed.action.type=='select_native_look'
+  elseif input.down and previous and armed and (armed.action.type=='select_native_look'or armed.action.type=='select_variant')
    and (not target or armed.key~=action_key(target))then
-   armed=nil -- A browse drag never becomes a new selection on return/release.
+   clear_double();armed=nil -- A browse drag never becomes a new selection on return/release.
   elseif not input.down and previous then
    local action=armed and target and armed.key==action_key(target)and target
    armed=nil
+   if not action then clear_double()end
    if action and action.type~='panel_background'then
-    local ok,why=self:action(action)
+    local now=click_time()
+    local card=action.type=='select_variant'or action.type=='select_native_look'
+    local repeated=card and last_click and now and now>=last_click.at and now-last_click.at<=1500
+     and last_click.key==action_key(action) and math.abs(input.x-last_click.x)<=8 and math.abs(input.y-last_click.y)<=8
+    local ok,why
+    if repeated then
+     local apply=action.type=='select_variant'and {type='apply_variant',label=action.label}
+      or {type='apply_variant',id=action.id}
+     last_click=nil;double_apply={action=apply,at=now};ok=true
+     if host.report then host.report('ui.double_click',action_key(apply))end
+    else
+     clear_double()
+     ok,why=self:action(action)
+     if ok and card and now then last_click={key=action_key(action),at=now,x=input.x,y=input.y}end
+    end
     if not ok and host.notice then host.notice(why)end
     -- The original card's release is already consumed. If the host now marks
     -- that original selection safe, its next native Apply must not be swallowed
@@ -255,11 +303,11 @@ function M.new(state_api,wizard_api,panel,host)
  function self:leave()
   local domain,display=host.current()
   if domain and display then wizard:action(domain,display,{type='cancel'})end
-  panel:clear();previous=nil;armed=nil;last_view=nil;selected_variant=nil;native_navigation=false;clear_confirm()
+  panel:clear();previous=nil;armed=nil;last_view=nil;selected_variant=nil;native_navigation=false;clear_confirm();clear_double()
   if host.end_creation then host.end_creation()end
  end
- function self:clear()panel:clear();previous=nil;armed=nil;clear_confirm()end
- function self:clear_selected_variant()selected_variant=nil;return true end
+ function self:clear()panel:clear();previous=nil;armed=nil;clear_confirm();clear_double()end
+ function self:clear_selected_variant()selected_variant=nil;clear_double();return true end
  function self:automation_snapshot()
   return {view=self:view(),regions=panel.regions or {}}
  end

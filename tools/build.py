@@ -11,7 +11,7 @@ import sys
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = re.search(r"local runtime = \{version='([0-9]+(?:\.[0-9]+)+)'", (ROOT/'src/main.lua').read_text()).group(1)
+VERSION = re.search(r"local runtime = \{version='([0-9]+(?:\.[0-9]+)+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?)'", (ROOT/'src/main.lua').read_text()).group(1)
 NAME = 'mods/hd2transmog/foundation'
 GUID = '46b51e90-d243-457a-ae92-8d7e6875c0ea'
 TITLE = 'HD2 Transmog Foundation'
@@ -22,7 +22,7 @@ DESCRIPTION = ('Owned armor variants with independent appearance, base stats and
 
 def bundle():
     chunks = ['-- HD2-Addon: ' + NAME + '\n']
-    for variable, filename in [('State','state.lua'), ('EquippedState','equipped_state.lua'), ('ControllerInput','controller_input.lua'), ('Platform','platform.lua'),
+    for variable, filename in [('Diagnostics','diagnostics.lua'), ('State','state.lua'), ('EquippedState','equipped_state.lua'), ('ControllerInput','controller_input.lua'), ('Platform','platform.lua'),
                                ('AppearanceRegistry','appearance_registry.lua'),
                                ('CompatSpec','compat_spec.lua'),
                                ('CatalogCompat','catalog_compat.lua'),
@@ -65,7 +65,9 @@ def bundle():
                                ('Adapter','runtime_adapter.lua'), ('Panel','panel.lua')]:
         chunks.append('local '+variable+' = (function()\n'+(ROOT/'src'/filename).read_text()+'\nend)()\n')
     chunks.append((ROOT/'src/main.lua').read_text())
-    return ''.join(chunks)
+    source=''.join(chunks)
+    build_id=hashlib.sha256(source.encode()).hexdigest()[:16]
+    return source.replace("build='source'", "build='"+build_id+"'", 1)
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -106,6 +108,10 @@ def main():
         'Create saves locally and does not equip or change the worn armor.\n'
         'Select a saved card to preview its look in the original stat/perk panels.\n'
         'Click Apply or press and release controller A (XInput/Steam Input) on a ready selected armor.\n'
+        '0.1.2-debug: diagnostic build with 1.5-second double-click equip and support for existing body armor in the helmet slot.\n'
+        'Install as an update to Transmog; do not enable a second copy. Existing variants are retained.\n'
+        'After reproducing an issue, send HD2Transmog.log, HD2Transmog.previous.log, BingusSharedLoader.log and Transmog/STATUS.txt.\n'
+        'Logs are under %LOCALAPPDATA%/CowboyBingus/Helldivers2/Logs. No debug.enabled marker is needed.\n'
         '0.1.2: controller A confirmation, parent-menu input fix, and creator base stats independent of the worn passive cache.\n'
         'Reduced Armor-menu processing and disconnected-controller polling; fresh ownership and equip checks remain enabled.\n'
         'Equip a variant once on this build to remember it for future launches. Restoration waits for verified idle-ship context.\n'

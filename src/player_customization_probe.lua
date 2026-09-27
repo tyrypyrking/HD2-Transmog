@@ -67,17 +67,23 @@ function M.new(bridge,data)
     assert(verify(),'customization changed during observation')
     return {body_type=body,request_body_type=wanted,verify=verify,evidence='native_body_type_readback'}
    end
-   local function equipment(raw)
+   local function equipment(raw,source)
     local out={body_type=u32(raw,0)}
     assert(out.body_type==0 or out.body_type==1,'local body type unavailable')
     for i,field in ipairs({'helmet','cape','armor'})do
      local item=u32(raw,i*4);local ref=data.kits[item]
-     assert(ref and ref.category==({1,2,0})[i],'local equipment identity/category unavailable')
+     -- Existing headless/double-passive saves can hold a known body armor in
+     -- the helmet slot. Observe that ID unchanged; the commit bridge protects
+     -- all non-body slots before/after Apply. Never infer a replacement helmet.
+     local category_ok=ref and (ref.category==({1,2,0})[i]or field=='helmet'and ref.category==0)
+     assert(category_ok,string.format(
+      'local equipment identity/category unavailable: %s.%s id=%08x category=%s expected=%d',
+      source,field,item,tostring(ref and ref.category or 'unknown'),({1,2,0})[i]))
      out[field..'_id']=kit_id(item)
     end
     return out
    end
-   local requested,current=equipment(request),equipment(cache)
+   local requested,current=equipment(request,'request'),equipment(cache,'cache')
    local passive_enum=u32(cache,0x3c);local passive=data.passives[passive_enum]
    assert(passive,'cached native armor passive unavailable')
    local torso=u32(cache,0x40);assert(torso<=3,'cached native torso class unavailable')

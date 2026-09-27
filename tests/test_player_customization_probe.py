@@ -78,3 +78,65 @@ local body=assert(observer:sample_body_type())
 put(player+8,word(123));assert(not body.verify()and not observer:sample_body_type())
 put(player+8,word(0xfffffffd));valid=false;assert(not observer:sample_body_type())
 ''')
+
+
+def test_invalid_equipment_error_identifies_source_slot_and_value():
+ run(r'''
+put(manager+0x96c+136+4,word(0xffffffff))
+local value,why=observer:sample()
+assert(not value and why:find('cache.helmet id=ffffffff category=unknown expected=1',1,true))
+put(manager+0xa7c+128+12,word(helmet))
+value,why=observer:sample()
+assert(not value and why:find('request.armor',1,true)and why:find('category=1 expected=0',1,true))
+''')
+
+
+def test_existing_body_armor_in_helmet_slot_is_observed_without_rewriting():
+ run(r'''
+put(manager+0xa7c+128+4,word(armor))
+put(manager+0x96c+136+4,word(armor))
+local observed=assert(observer:sample())
+assert(observed.request.helmet_id==observed.request_armor_id)
+assert(observed.current.helmet_id==observed.cache_armor_id)
+assert(observed.settled and observed.verify())
+assert(read(manager+0xa7c+128+4,4)==word(armor))
+put(manager+0x96c+136+4,word(helmet))
+assert(not observed.verify())
+assert(not observer:sample().settled)
+''')
+
+
+def test_helmet_exception_does_not_admit_cape_or_unknown_ids_or_wrong_body_category():
+ run(r'''
+put(manager+0x96c+136+4,word(cape));assert(not observer:sample())
+put(manager+0x96c+136+4,word(0xffffffff));assert(not observer:sample())
+put(manager+0x96c+136+4,word(armor))
+put(manager+0x96c+136+8,word(armor));assert(not observer:sample())
+put(manager+0x96c+136+8,word(cape))
+put(manager+0x96c+136+12,word(helmet));assert(not observer:sample())
+''')
+
+
+def test_headless_equipment_through_commit_bridge_preserves_helmet_and_checks_freshness():
+ run(r'''
+put(manager+0xa7c+128+4,word(armor));put(manager+0x96c+136+4,word(armor))
+local Bridge=dofile('src/armor_refresh_bridge.lua')
+local target='armor:61b31723';local current='armor:1f9bfa78';local commits=0
+local grid={commit_capabilities=function()return {commit_verified=true}end,
+ commit_snapshot=function()return {session='armory',local_player_id=0xfffffffd,
+  other_key='native-protected-fields',pending_nonarmor=false,controller_armor_id=current,profile_armor_id=current}end,
+ verify_commit=function()return true end,
+ commit_owned=function(_,id)
+  assert(id==target);commits=commits+1
+  put(manager+0xa7c+128+12,word(0x61b31723));put(manager+0x96c+136+12,word(0x61b31723))
+  current=target;return true
+ end}
+local catalog={owned={[target]=true},verify_owned=function()return true end}
+local bridge=assert(Bridge.new(grid,observer,catalog))
+local before=assert(bridge.snapshot());assert(bridge.commit_owned(target,before))
+local after=assert(bridge.snapshot());assert(after.other_key==before.other_key)
+assert(after.request_armor_id==target and commits==1)
+assert(read(manager+0xa7c+128+4,4)==word(armor)and read(manager+0x96c+136+4,4)==word(armor))
+put(manager+0x96c+136+4,word(helmet))
+assert(not bridge.commit_owned(target,after)and commits==1)
+''')

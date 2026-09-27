@@ -3,20 +3,32 @@ local MODULE = 'mods/hd2transmog/foundation'
 local UiLayout=UiLayout or require('src.ui_layout')
 local EquippedState=EquippedState or require('src.equipped_state')
 if rawget(_G, 'HD2Transmog') then return rawget(_G, 'HD2Transmog') end
-local runtime = {version='0.1.2', status='starting', armor_writes=false,native_hitbox_source='root',automatic_custom_ui=true,profile={frames=0,tick=0,guard=0,draw=0}}
+local runtime = {version='0.1.2-debug',build='source', status='starting', armor_writes=false,native_hitbox_source='root',automatic_custom_ui=true,profile={frames=0,tick=0,guard=0,draw=0}}
 rawset(_G, 'HD2Transmog', runtime)
 local loader = rawget(_G, 'CowboyBingusModLoader')
 local log
 local function report(key, value)
-    local line = key..'='..tostring(value)
-    if log then pcall(function() log:write(line..'\n'); log:flush() end) end
+    if log then log:report(key,value)end
 end
 local ok, failure = pcall(function()
+    log=(Diagnostics or require('src.diagnostics')).open(loader)
+    report('startup.begin',true);report('version',runtime.version);report('build',runtime.build)
+    report('loader.present',type(loader)=='table')
+    report('loader.version',type(loader)=='table'and loader.version or 'unknown')
+    report('loader.api',type(loader)=='table'and loader.api or 'unavailable')
     assert(type(loader)=='table' and tonumber(loader.api) and tonumber(loader.api)>=1,
         'Bingus Shared Loader API 1 is required')
-    if type(loader.open_log)=='function' then log=loader.open_log('HD2Transmog.log') end
-    report('version',runtime.version); report('armor_writes',false)
+    report('loader.compatible',true);report('armor_writes',false)
+    if type(loader.modules)=='table'then
+        local modules={};for name,value in pairs(loader.modules)do
+            if #modules>=64 then break end
+            modules[#modules+1]=tostring(name)..':'..tostring(value)
+        end
+        table.sort(modules);report('loader.modules_at_init',table.concat(modules,','))
+    end
+    report('runtime.luajit',jit and jit.version or 'unavailable')
     local engine=assert(rawget(_G,'stingray'),'Stingray UI unavailable')
+    report('startup.engine',type(engine.Gui)=='table'and 'GUI available'or 'GUI unavailable')
     if AppearanceRegistry then runtime.appearances=AppearanceRegistry.new(report)end
     local fs=Platform.new(loader, engine)
     local debug_bridge=DebugBridge and DebugBridge.new(fs,engine,report)
@@ -24,6 +36,7 @@ local ok, failure = pcall(function()
     local domain=State.new()
     local equipped_state=EquippedState.new(fs,State,report)
     local startup={record=equipped_state:record(),next_sample=0}
+    report('restore.intent_present',startup.record~=nil)
     local startup_guard
     local editor=State.editor_new()
     local catalog_result, catalog_adapter, catalog_probe, catalog_failed
@@ -58,6 +71,7 @@ local ok, failure = pcall(function()
     local function restore()
         local bytes,why=fs.read('transmog.state')
         if not bytes then
+            report('state.load',why or 'unavailable')
             if why~='missing' then locked=true; view.notice='State unreadable - saving is disabled'; report('state.read_error',why) end
             return
         end
@@ -151,6 +165,7 @@ local ok, failure = pcall(function()
                 local function label(field,value)return (((result.context.labels[field]or{})[value]or value):gsub('[\t\r\n]',' '))end
                 rows[#rows+1]=table.concat({'armor',id,result.owned[id] and 'owned' or 'unowned',v.stats_id,v.passive_variant_id,label('appearance_id',id),label('passive_variant_id',v.passive_variant_id)},'\t')
             end
+            report('catalog.health','kits='..tostring(result.counts.kits)..',owned_armors='..tostring(result.counts.owned_armors)..',capacity='..tostring(result.context.variant_capacity))
             fs.write_atomic('catalog-observed.txt',table.concat(rows,'\n')..'\n')
             view.notice=tostring(result.counts.owned_armors)..' owned armors ready - create a variant'
             status('CATALOG READY - native armor and ownership verified')
@@ -294,6 +309,9 @@ local ok, failure = pcall(function()
         assert(not patch_active,'Reset the development preview before selecting a saved variant')
         local player=PlayerCustomizationProbe.new(catalog_adapter:data_bridge(),CatalogData)
         local function preview_saved(request,requires_apply,label,index,widgets_only)
+                report('preview.request',table.concat({tostring(grid_ui.screen_kind),tostring(label),tostring(request.appearance_id),tostring(request.stats_id),tostring(request.passive_variant_id),'widgets_only='..tostring(widgets_only)},'|'))
+                local observed,why=player:sample()
+                report('preview.player',observed and PlayerCustomizationProbe.format(observed)or why)
                 for i,card in ipairs(grid_ui.custom_cards or {})do
                     if label and card.label==label then index=i-1;break end
                 end
@@ -372,6 +390,8 @@ local ok, failure = pcall(function()
         assert(VariantWizard and WizardPanel and UiWorkflow,'Creator modules are unavailable')
         creation=UiWorkflow.new(State,VariantWizard,WizardPanel.new(engine),{
             native_picker=true,
+            now=fs.now,
+            report=report,
             allow_create=grid_ui.screen_kind~='deployment',
             current=function()return domain,catalog_result and catalog_result.context or {}end,
             input_scope=function()
@@ -1316,6 +1336,7 @@ local ok, failure = pcall(function()
         if previous_update then return after(previous_update(...)) end
         return after()
     end)
+    report('startup.hooks_installed',true)
     rawset(_G,'shutdown',function(...)
         stopped=true;pcall(function() surface:clear() end)
         if creation then pcall(function()creation:leave()end)end

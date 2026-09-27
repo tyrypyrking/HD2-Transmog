@@ -1,6 +1,10 @@
 # HD2 Transmog
 
-Version **0.1.2** — combine an owned armor appearance, an owned base-stat profile, and an owned passive in Helldivers 2. Requires **Bingus Shared Loader v15+ / API 1**.
+Version **0.1.2-debug** — combine an owned armor appearance, an owned base-stat profile, and an owned passive in Helldivers 2. Requires **Bingus Shared Loader v15+ / API 1**.
+
+This diagnostic patch adds double-click equipping for ordinary/custom armor in Armory and pre-mission Equipment, with a 1.5-second click window. It also accepts a known body-armor ID already occupying the helmet slot, preserving that existing slot while changing body armor. This fixes the reproduced validation failure in automated tests; an affected double-passive player still needs to confirm it live. Player-reported custom-card crashes remain under investigation.
+
+Install this as an update to the existing mod, not alongside another Transmog copy. Saved variants are retained. Diagnostic logging is automatic; no debug marker is required. The offline suite passes 958 tests, with 9 optional checks skipped. The extended click window and logging were exercised live without crashes or hangs.
 
 ## Use
 
@@ -23,7 +27,7 @@ Input capture is restricted to the visible Armor picker. The parent Armory menu,
 
 Reduced Armor-menu work by reusing unchanged display choices and decoded offer data while retaining fresh ownership, geometry, and equip checks. Disconnected controller discovery is bounded, and input polling stops outside the active Armor picker. User-driven benchmarks found a modest Armor-menu improvement and no meaningful mission FPS difference in the repeated test route; some menu overhead remains. These results are specific to the tested system and route.
 
-Final user QA on 2026-09-28 passed with only Bingus Shared Loader and the normal 0.1.2 build installed: creation, mouse/controller equipping, equipped-state feedback and sound, menu navigation, ultrawide layout, pre-mission use, restart restoration, and variant removal. The remaining Armor-menu overhead was accepted. The offline suite passes 934 tests, with 9 optional checks skipped. The specific double-passive glitch remains untested in an affected live environment.
+Final user QA on 2026-09-28 passed with only Bingus Shared Loader and the normal 0.1.2 build installed: creation, mouse/controller equipping, equipped-state feedback and sound, menu navigation, ultrawide layout, pre-mission use, restart restoration, and variant removal. The remaining Armor-menu overhead was accepted. That release passed 934 offline tests, with 9 optional checks skipped. The specific double-passive glitch remains untested in an affected live environment.
 
 Creator base-stat choices now read the verified body type independently of the worn passive cache. Unknown cached passive data no longer blocks that read; full equipment validation still applies when equipping. Missing stat evidence shows a diagnostic message and transient read failures are retried. This addresses a failure path consistent with the reported double-passive issue; live reproduction of that glitch is still pending.
 
@@ -52,7 +56,7 @@ python3 -m pytest -q tests
 python3 tools/build.py
 ```
 
-Import `dist/HD2-Transmog-Foundation-0.1.2.zip` through Arsenal as the existing mod, enable it with the loader, and deploy while the game is closed. Let Arsenal assign patch numbers. Restart the game after installing an update.
+Import `dist/HD2-Transmog-Foundation-0.1.2-debug.zip` through Arsenal as the existing mod, enable it with the loader, and deploy while the game is closed. Let Arsenal assign patch numbers. Restart the game after installing an update.
 
 The mod identity and saved-state format are unchanged in 0.1.2. Existing saved variants are retained. State is stored under `%LOCALAPPDATA%/CowboyBingus/Helldivers2/Transmog`; diagnostics are in `STATUS.txt` and the sibling `Logs/HD2Transmog.log`. Corrupt or unreadable state is preserved rather than discarded.
 
@@ -64,6 +68,8 @@ Applying a variant retains the appearance's package identity and switches away f
 
 Native functions and data are discovered and validated against the current executable. Structural game changes may require an adapter update. Cache confirmation does not prove resource streaming has finished. Mission behavior and compatibility with other mods require live testing.
 
+Diagnostics record startup health and action/native-call checkpoints, flushing each entry immediately. The current log and three previous sessions are retained in the Logs directory. Logging adds no periodic health scan or per-frame polling; entries and session size are bounded. For a crash report, include `HD2Transmog.log`, `HD2Transmog.previous.log`, `BingusSharedLoader.log`, and `Transmog/STATUS.txt` from the affected run. A final `begin` without its matching completion narrows the failure location but does not prove its cause.
+
 Development automation is opt-in through the local `debug.enabled` marker. Research captures, personal state, logs, deployment backups, and local game data are not part of the public repository.
 
 ## Public source hygiene
@@ -74,7 +80,7 @@ Git uses an allowlist of source, offline tests, build tools, documentation, thre
 
 The pipeline runs the offline test suite on branch pushes, merge requests, and tags. When a merge request is open, its pipeline replaces the duplicate branch-push pipeline. Test results are uploaded as a [GitLab JUnit report](https://docs.gitlab.com/ci/testing/unit_test_reports/), including on test failure.
 
-After tests pass, `build-package` provides the installable ZIP and its SHA-256 file as downloadable job artifacts, retained for 30 days. A tag such as `v0.1.2` runs `release-build` instead and keeps those artifacts without an expiration. Release tags must match the runtime version in `src/main.lua`; both `0.1.2` and `v0.1.2` are accepted. The ZIP filename and bundled readme derive their version from that same runtime declaration. Update the package regression expectations and documentation when changing the version.
+After tests pass, `build-package` provides the installable ZIP and its SHA-256 file as downloadable job artifacts, retained for 30 days. A tag such as `v0.1.2-debug` runs `release-build` instead and keeps those artifacts without an expiration. Release tags must match the runtime version in `src/main.lua`; both `0.1.2-debug` and `v0.1.2-debug` are accepted. The ZIP filename and bundled readme derive their version from that same runtime declaration. Update the package regression expectations and documentation when changing the version.
 
 The jobs need a Linux x86-64 Docker/Kubernetes runner with internet access to fetch the Python image, Debian/Python dependencies and checksum-verified packaging tools. They require no game installation, private captures, deployment credentials, or publishing token. Only the ZIP, checksum and test report are uploaded; CI does not publish the mod or create a GitLab release entry. Download the ZIP from the successful build job to publish it yourself.
 
@@ -83,8 +89,8 @@ To reproduce a tagged build locally:
 ```sh
 python3 tools/setup_dependencies.py
 python3 -m pytest -q tests
-python3 tools/build.py --release-tag v0.1.2
-(cd dist && sha256sum -c HD2-Transmog-Foundation-0.1.2.zip.sha256)
+python3 tools/build.py --release-tag v0.1.2-debug
+(cd dist && sha256sum -c HD2-Transmog-Foundation-0.1.2-debug.zip.sha256)
 ```
 
 Pipeline triggering follows GitLab's documented [workflow rules](https://docs.gitlab.com/ci/yaml/workflow/).

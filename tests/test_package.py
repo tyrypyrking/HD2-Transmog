@@ -13,12 +13,13 @@ from archive import resource_hash
 
 def test_installable_package_and_luajit_discovery_entry():
     subprocess.run([sys.executable,'tools/build.py'],cwd=ROOT,check=True,capture_output=True,text=True)
-    package=ROOT/'dist/HD2-Transmog-Foundation-0.1.2.zip'
+    package=ROOT/'dist/HD2-Transmog-Foundation-0.1.2-debug.zip'
     first=package.read_bytes()
     with zipfile.ZipFile(package) as z:
         assert set(z.namelist()) == {
             'manifest.json','README.txt','THIRD-PARTY-LICENSES.txt','Addon/9ba626afa44a3aa3.patch_0',
             'Addon/9ba626afa44a3aa3.patch_0.stream','Addon/9ba626afa44a3aa3.patch_0.gpu_resources'}
+        assert b'0.1.2-debug' in z.read('README.txt')
         manifest=json.loads(z.read('manifest.json'))
         assert manifest['Guid']=='46b51e90-d243-457a-ae92-8d7e6875c0ea'
         assert manifest['Options'][0]['Include']==['Addon']
@@ -44,8 +45,8 @@ def test_installable_package_and_luajit_discovery_entry():
 
 
 def test_release_tag_must_match_runtime_and_checksum_identifies_exact_zip():
-    package=ROOT/'dist/HD2-Transmog-Foundation-0.1.2.zip'
-    subprocess.run([sys.executable,'tools/build.py','--release-tag','v0.1.2'],cwd=ROOT,check=True,capture_output=True,text=True)
+    package=ROOT/'dist/HD2-Transmog-Foundation-0.1.2-debug.zip'
+    subprocess.run([sys.executable,'tools/build.py','--release-tag','v0.1.2-debug'],cwd=ROOT,check=True,capture_output=True,text=True)
     before=package.read_bytes()
     import hashlib
     assert package.with_suffix('.zip.sha256').read_text()==f'{hashlib.sha256(before).hexdigest()}  {package.name}\n'

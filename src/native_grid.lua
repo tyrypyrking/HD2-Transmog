@@ -1386,12 +1386,15 @@ function M.new(bridge,report,backend)
     assert(target.index==index and target.kit_id==id and target.column<current.count,'native focus plan identity changed')
     -- The native row helper owns child focus bits and their visual animations.
     -- The broader Highlight finalizer scrolls/rebinds rows, so do not call it.
-    if old then assert(calls.focus_row(targets.focus_row,old.address,0xffffffff)==true,'native old-row focus clear failed')end
+    report('grid.focus.begin',id..':index='..index..':offer='..target.offer_id)
+    if old then report('grid.focus.clear_begin',id);assert(calls.focus_row(targets.focus_row,old.address,0xffffffff)==true,'native old-row focus clear failed');report('grid.focus.clear_returned',id)end
     for _,field in ipairs({{0x928e4,target.visible_slot},{0x928e8,target.row},{0x928ec,target.column},
      {0x928f0,target.group},{0x92988,target.offer_id}})do
      assert(calls.write_armor(bound_grid+field[1],field[2])==true,'native exact focus mirror write rejected')
     end
+    report('grid.focus.target_begin',id)
     assert(calls.focus_row(targets.focus_row,current.address,target.column)==true,'native target-row focus failed')
+    report('grid.focus.target_returned',id)
     assert(preserved(),'native exact focus changed scroll, marker, profile, or owner')
     return true
    end
@@ -1550,8 +1553,10 @@ function M.new(bridge,report,backend)
   local ok,result=pcall(function()
    if original~=desired then
     assert(type(calls.write_armor)=='function','scoped passive writer unavailable')
+    report('grid.passive_scope.begin',ident(record.item_id)..':original='..u32(original,0)..':temporary='..enum)
     attempted=true
     assert(calls.write_armor(record.address+28,enum)==true,'scoped passive write failed')
+    report('grid.passive_scope.written',ident(record.item_id))
    end
    assert(read(record.address,64)==scoped,'scoped passive readback differs')
    return callback()
@@ -1566,8 +1571,10 @@ function M.new(bridge,report,backend)
     for i=1,4 do local byte=current:byte(28+i)
      assert(byte==original:byte(i)or byte==desired:byte(i),'passive changed independently before restoration')
     end
+    report('grid.passive_scope.restore_begin',ident(record.item_id))
     assert(calls.write_armor(record.address+28,u32(original,0))==true
      and read(record.address,64)==expected,'original passive restoration failed')
+    report('grid.passive_scope.restored',ident(record.item_id))
    end)
   end
   assert(restored,'native preview passive recovery required: '..tostring(reason))
@@ -1700,12 +1707,16 @@ function M.new(bridge,report,backend)
     local live=detail_context();assert(live.owner==ctx.owner,'native menu changed before passive widget update')
     report('grid.variant_passive.begin',passive_id)
     if u32(cached_passive,0)==offer then
+     report('grid.passive_refresh.begin',tostring(alternate))
      assert(calls.detail_passive(targets.detail_passive,ctx.detail_widget+0x21460,alternate)~=false,'native passive refresh rejected')
+     report('grid.passive_refresh.returned',tostring(alternate))
      local current=detail_context();assert(current.owner==ctx.owner,'native menu changed during passive refresh')
      assert(u32(read(ctx.detail_widget+0x21460+0x27e8,4),0)==alternate,'native passive refresh readback differs')
     end
     assert(code_current()and catalog_result.verify_owned(ids)==true,'native passive preview evidence changed')
+    report('grid.passive_bind.begin',tostring(offer)..':enum='..passive.enum)
     assert(calls.detail_passive(targets.detail_passive,ctx.detail_widget+0x21460,offer)~=false,'native passive widget update rejected')
+    report('grid.passive_bind.returned',tostring(offer))
     assert(u32(read(ctx.detail_widget+0x21460+0x27e8,4),0)==offer,'native passive offer readback differs')
     local stat_offers=read(ctx.detail_widget+0xdff8+0x6300,8)
     assert(u32(stat_offers,0)==offer and u32(stat_offers,4)==offer,'native stat offers readback differs')
@@ -1722,7 +1733,8 @@ function M.new(bridge,report,backend)
     passive_variant_id=passive_id,native_detail_view=true,
     temporary_passive_restored=true,appearance_data_unchanged=true,equipped=false,rendering_verified=false}
   end)
-  if not ok then return nil,tostring(result)end;return result
+  if not ok then report('grid.variant_preview.failed',result);return nil,tostring(result)end
+  report('grid.variant_preview.complete',appearance_id);return result
  end
  -- Presentation only, after the coordinator has confirmed the armor/passive
  -- cache. Do not re-enter native Apply or restart the appearance preview.
