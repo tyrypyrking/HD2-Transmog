@@ -1,0 +1,75 @@
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_TAG'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS && $CI_PIPELINE_SOURCE == "push"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH'
+
+stages:
+  - test
+  - build
+
+default:
+  image: python:3.12-slim-trixie
+  interruptible: true
+  before_script:
+    - apt-get update -qq
+    - apt-get install -y --no-install-recommends luajit ca-certificates binutils
+    - python3 -m pip install --disable-pip-version-check -r requirements-dev.txt
+    - python3 tools/setup_dependencies.py
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  PYTHONUNBUFFERED: "1"
+
+cache:
+  key:
+    prefix: python312
+    files:
+      - requirements-dev.txt
+  paths:
+    - .cache/pip/
+
+unit-tests:
+  stage: test
+  rules:
+    - when: on_success
+  script:
+    - python3 -m pytest -q tests --junitxml=reports/pytest.xml
+  artifacts:
+    when: always
+    expire_in: 14 days
+    reports:
+      junit: reports/pytest.xml
+    paths:
+      - reports/pytest.xml
+
+.package:
+  stage: build
+  dependencies: []
+  artifacts:
+    name: "HD2-Transmog-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - dist/HD2-Transmog-Foundation-*.zip
+      - dist/HD2-Transmog-Foundation-*.zip.sha256
+
+build-package:
+  extends: .package
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: never
+    - when: on_success
+  script:
+    - python3 tools/build.py
+  artifacts:
+    expire_in: 30 days
+
+release-build:
+  extends: .package
+  rules:
+    - if: '$CI_COMMIT_TAG'
+  script:
+    - python3 tools/build.py --release-tag "$CI_COMMIT_TAG"
+  artifacts:
+    expire_in: never

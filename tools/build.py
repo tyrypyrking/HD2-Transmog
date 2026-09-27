@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """Bundle the LuaJIT addon and produce a deterministic Arsenal import ZIP."""
 from pathlib import Path
+import argparse
 import hashlib
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
+VERSION = re.search(r"local runtime = \{version='([0-9]+(?:\.[0-9]+)+)'", (ROOT/'src/main.lua').read_text()).group(1)
 NAME = 'mods/hd2transmog/foundation'
 GUID = '46b51e90-d243-457a-ae92-8d7e6875c0ea'
 TITLE = 'HD2 Transmog Foundation'
@@ -64,6 +67,11 @@ def bundle():
     return ''.join(chunks)
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--release-tag', help='Require a release tag matching the runtime version (for example v0.1).')
+    args = parser.parse_args()
+    if args.release_tag is not None and args.release_tag not in (VERSION, 'v'+VERSION):
+        parser.error(f'release tag must be {VERSION} or v{VERSION}; got {args.release_tag!r}')
     out = ROOT/'dist'
     out.mkdir(exist_ok=True)
     source = bundle()
@@ -73,7 +81,7 @@ def main():
                    input=source,text=True,check=True)
     sys.path.insert(0,str(ROOT/'vendor/BingusSharedLoader/scripts'))
     from build_addon import build_addon
-    package = out/'HD2-Transmog-Foundation-0.1.zip'
+    package = out/f'HD2-Transmog-Foundation-{VERSION}.zip'
     build_addon(NAME,source.encode(),GUID,package,TITLE)
     with zipfile.ZipFile(package) as z:
         files={n:z.read(n) for n in z.namelist()}
@@ -83,7 +91,7 @@ def main():
     files['manifest.json']=(json.dumps(manifest,indent=2)+'\n').encode()
     files['THIRD-PARTY-LICENSES.txt']=(ROOT/'vendor/LuaJIT-disassembler/COPYRIGHT').read_bytes()
     files['README.txt']=(
-        'HD2 Transmog Foundation 0.1 - Independent armor appearance, base stats and passives\n'
+        f'HD2 Transmog Foundation {VERSION} - Independent armor appearance, base stats and passives\n'
         'Import this ZIP in Arsenal, enable it with Bingus Shared Loader and deploy.\n'
         'Open the ship Armory: press 2, click the left Armor card, then press 1.\n'
         'Custom Variant appears before Light Armor. Saved variants precede the + tile.\n'
@@ -113,7 +121,9 @@ def main():
             info.external_attr=0o100644 << 16
             z.writestr(info,data)
     print(package)
-    print('SHA256',hashlib.sha256(package.read_bytes()).hexdigest())
+    digest = hashlib.sha256(package.read_bytes()).hexdigest()
+    package.with_suffix('.zip.sha256').write_text(f'{digest}  {package.name}\n')
+    print('SHA256', digest)
 
 if __name__=='__main__':
     main()

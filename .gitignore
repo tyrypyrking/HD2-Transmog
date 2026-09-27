@@ -2,6 +2,7 @@
 /*
 !/.gitignore
 !/.gitattributes
+!/.gitlab-ci.yml
 !/README.md
 !/requirements-dev.txt
 !/src/

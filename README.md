@@ -27,7 +27,7 @@ Live validation used a freshly restarted 0.1 runtime and a deployed package matc
 
 ## Build and install
 
-Prerequisites: Python 3.10+, LuaJIT on PATH, and the Python packages below (use a virtual environment). The setup command downloads two packaging modules from Bingus Shared Loader at revision `836427cef78b8a67cf771c1f16291d93be921744`, verifies their SHA-256 hashes, and stores them in ignored local dependency storage. Network access is needed for setup only; normal builds and tests need no installed game.
+Prerequisites: Python 3.10+, a current LuaJIT 2.1 on PATH, GNU binutils (for synthetic x86-64 test fixtures), and the Python packages below (use a virtual environment). The setup command downloads two packaging modules from Bingus Shared Loader at revision `836427cef78b8a67cf771c1f16291d93be921744`, verifies their SHA-256 hashes, and stores them in ignored local dependency storage. Network access is needed for setup only; normal builds and tests need no installed game.
 
 The external [Bingus Shared Loader source](https://github.com/CowboyBingus/BingusSharedLoader) is not redistributed in this repository; consult upstream for its terms. The bundled LuaJIT decoder is MIT-licensed, with its copyright and provenance in `vendor/LuaJIT-disassembler`. Static game reference facts and their provenance are described in [reference/README.md](reference/README.md).
 
@@ -55,3 +55,22 @@ Development automation is opt-in through the local `debug.enabled` marker. Resea
 ## Public source hygiene
 
 Git uses an allowlist of source, offline tests, build tools, documentation, three static reference fixtures, and the licensed decoder. Local research, notes, release drafts, screenshots, logs, saves, game dumps, caches, backups, archives and other vendor checkouts are excluded. New public files must be deliberately added to the allowlist; do not force-add local artifacts.
+
+## GitLab CI and release builds
+
+The pipeline runs the offline test suite on branch pushes, merge requests, and tags. When a merge request is open, its pipeline replaces the duplicate branch-push pipeline. Test results are uploaded as a [GitLab JUnit report](https://docs.gitlab.com/ci/testing/unit_test_reports/), including on test failure.
+
+After tests pass, `build-package` provides the installable ZIP and its SHA-256 file as downloadable job artifacts, retained for 30 days. A tag such as `v0.1` runs `release-build` instead and keeps those artifacts without an expiration. Release tags must match the runtime version in `src/main.lua`; both `0.1` and `v0.1` are accepted. The ZIP filename and bundled readme derive their version from that same runtime declaration. Update the package regression expectations and documentation when changing the version.
+
+The jobs need a Linux x86-64 Docker/Kubernetes runner with internet access to fetch the Python image, Debian/Python dependencies and checksum-verified packaging tools. They require no game installation, private captures, deployment credentials, or publishing token. Only the ZIP, checksum and test report are uploaded; CI does not publish the mod or create a GitLab release entry. Download the ZIP from the successful build job to publish it yourself.
+
+To reproduce a tagged build locally:
+
+```sh
+python3 tools/setup_dependencies.py
+python3 -m pytest -q tests
+python3 tools/build.py --release-tag v0.1
+(cd dist && sha256sum -c HD2-Transmog-Foundation-0.1.zip.sha256)
+```
+
+Pipeline triggering follows GitLab's documented [workflow rules](https://docs.gitlab.com/ci/yaml/workflow/).

@@ -44,6 +44,19 @@ if pytest_skip:
 FAKE_NATIVE_LUA = r"""
 local tmp = ...
 local nat = {}
+-- POSIX directory reads differ between LuaJIT builds (nil vs empty string).
+-- Inject a real read-error result for these Windows unreadable-file tests,
+-- while keeping real temporary files for writes, backups and restoration.
+nat.unreadable = {}
+local real_open = io.open
+io.open = function(path, mode)
+    if nat.unreadable[path] and mode == 'rb' then
+        return {read=function() return nil, 'Permission denied', 13 end,
+                seek=function(_, origin) return origin == 'end' and 1 or 0 end,
+                close=function() return true end}
+    end
+    return real_open(path, mode)
+end
 local function exists(p) local f = io.open(p, 'rb'); if f then f:close() return true end return false end
 function nat.GetFileAttributesA(p) return exists(p) and 0x20 or 0xffffffff end
 function nat.GetLastError() return nat.last_error or 2 end
@@ -327,6 +340,7 @@ assert(f and f:read('*a') == '{"older":0}', 'setup backup mismatch'); f:close()
 -- fake GetFileAttributesA sees it as existing, the bounded read says read_error
 os.remove(d .. '/state.json')
 os.execute('mkdir -p "' .. d .. '/state.json" 2>/dev/null')
+N.unreadable[d .. '/state.json'] = true
 local w1, w2 = p.write_atomic('state.json', '{"v":9}')
 assert(w1 == nil, 'must refuse to replace an unreadable primary')
 assert(w2 == 'primary_unreadable', 'reason=' .. tostring(w2))
@@ -414,6 +428,7 @@ assert(select(2, p.read('nope.json')) == 'missing', 'missing reason')
 -- an existing-but-unreadable target (a directory) is 'read_error', never a
 -- successful empty read and never 'missing'
 os.execute('mkdir -p "' .. p.directory .. '/not-a-file.json" 2>/dev/null')
+N.unreadable[p.directory .. '/not-a-file.json'] = true
 local dreason = select(2, p.read('not-a-file.json'))
 assert(dreason == 'read_error', 'directory must be read_error: ' .. tostring(dreason))
 -- oversized file via read path: > 1 MiB on disk -> too_large (bounded read)
