@@ -185,10 +185,10 @@ assert(Model.copy_snapshot({armor='0x00000001',transmog=recipe}).transmog==nil)
 SOURCE = ROOT/'vendor/DiverKit-reference/loadouts.lua'
 
 
-def real_modules():
-    if not SOURCE.exists():
+def real_modules(source_path=SOURCE):
+    if not source_path.exists():
         pytest.skip('Optional locally installed DiverKit source is unavailable')
-    source = SOURCE.read_text()
+    source = source_path.read_text()
     source = source[:source.index('local ok,why=pcall(start_presets)')]
     return source + r'''
 Files.rotate_log=function()return true,'fixture'end
@@ -199,8 +199,9 @@ return {model=Model,apply=Apply,json=JSON,start=start_presets}
 '''
 
 
-def test_supported_installed_source_is_discovered_and_real_atomic_saves_keep_metadata():
-    source = real_modules()
+@pytest.mark.parametrize('source_path', [SOURCE, SOURCE.with_name('loadouts-8.10.1.lua')])
+def test_supported_installed_source_is_discovered_and_real_atomic_saves_keep_metadata(source_path):
+    source = real_modules(source_path)
     run("local original_source=[==========["+source+"]==========]\n"+r'''
 local real_require=require
 local env=setmetatable({}, {__index=_G});env._G=env

@@ -153,10 +153,14 @@ end
 '''
 
 
-def run(body, *, automatic=False, setup='', stats_follow_look=False):
+def run(body, *, automatic=False, setup='', stats_follow_look=False, passive_icons=True, helmet_transmog=False):
     main=(ROOT/'src/main.lua').read_text()
+    if helmet_transmog:
+        main=main.replace('local HELMET_TRANSMOG = false', 'local HELMET_TRANSMOG = true', 1)
     if stats_follow_look:
         main=main.replace('local STATS_FOLLOW_LOOK = false', 'local STATS_FOLLOW_LOOK = true', 1)
+    if not passive_icons:
+        main=main.replace('local PASSIVE_PREVIEW_ICONS = true', 'local PASSIVE_PREVIEW_ICONS = false', 1)
     script=HARNESS+'\nlocal function boot()\n'+main+'''
 end
 local runtime=boot();assert(runtime.status~='startup_failed',runtime.status)
@@ -275,3 +279,9 @@ assert(saved.presets['Custom Variant 1'].passive_variant_id=='perk-a')
 assert(saved.presets.Existing.stats_id=='stats-a')
 assert(logged_count('runtime.error=')==0)
 ''', stats_follow_look=True)
+
+
+def test_passive_preview_setting_reaches_display_without_changing_saved_armor():
+    for enabled in (True,False):
+        run("assert(result.context.passive_preview_icons=="+str(enabled).lower()+")\n"
+            "assert(files['transmog.state']==saved_before and save_count==0)",passive_icons=enabled)

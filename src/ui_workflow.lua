@@ -24,6 +24,9 @@ end
 function M.new(state_api,wizard_api,panel,host)
  assert(type(host)=='table'and type(host.current)=='function'and type(host.persist)=='function','UI host required')
  local wizard=wizard_api.new(state_api,{allow_create=host.allow_create~=false,stats_follow_look=host.stats_follow_look==true})
+ local focused_look
+ local controller_blocked
+ local creator_pad=(CreatorController or require('src.creator_controller')).new()
  local self={};local previous,armed,release_latch,last_view=nil,nil,false,nil
  local last_click,double_apply
  local function clear_double()last_click=nil;double_apply=nil end
@@ -74,6 +77,16 @@ function M.new(state_api,wizard_api,panel,host)
  function self:view()
   local domain,display=context();local view=wizard:view(domain,display)
   view.native_picker=host.native_picker==true
+  if view.open and view.step==1 and host.controller_native_looks then
+   view.controller_native_looks=true;view.controller_columns=3
+   local ordered,seen,by_id={},{},{}
+   for _,option in ipairs(view.options)do by_id[option.id]=option end
+   for _,id in ipairs(host.controller_look_order and host.controller_look_order()or {})do
+    if by_id[id]and not seen[id]then ordered[#ordered+1]=by_id[id];seen[id]=true end
+   end
+   for _,option in ipairs(view.options)do if not seen[option.id]then ordered[#ordered+1]=option end end
+   view.options=ordered
+  end
   if not view.open and selected_variant and domain.presets[selected_variant.label]then
    selected_variant.display_name=wizard_api.display_name(display,selected_variant.request,selected_variant.label)
    view.selected_variant=selected_variant
@@ -86,17 +99,20 @@ function M.new(state_api,wizard_api,panel,host)
     if type(view.apply_notice)=='string'then view.apply_notice=view.apply_notice:gsub('^.-%.lua:%d+: ','')end
    end
   end
+  if view.open and creator_pad.active then
+   return creator_pad:decorate(view,panel.controller_capacity and panel:controller_capacity(view)or 3)
+  end
   return view
  end
  function self:before(input)
   if host.input_scope and host.input_scope()==false then
-   panel:clear();previous=nil;armed=nil;release_latch=false;native_navigation=false;clear_confirm();clear_double()
+   panel:clear();creator_pad:interrupt();previous=nil;armed=nil;release_latch=false;native_navigation=false;clear_confirm();clear_double()
    return true
   end
   -- Poll native input only while this UI owns an active Armor picker. XInput
   -- device discovery can be expensive even when no controller is connected.
   if type(input)=='function'then input=input()end
-  if not input then clear_confirm();clear_double();previous=nil;armed=nil end
+  if not input then creator_pad:interrupt();clear_confirm();clear_double();previous=nil;armed=nil end
   if input and confirm_source and input.controller_source~=confirm_source then clear_confirm()end
   local open=wizard:is_open()
   -- Native tabs own their entire mouse gesture, including release. A saved
@@ -128,7 +144,17 @@ function M.new(state_api,wizard_api,panel,host)
   -- selection is routed explicitly through a separately proved thumbnail hit.
   -- The OS button remains available to this controller's own hit testing.
   if open or release_latch then
-   local captured,reason=consume()
+   local captured,reason
+   if open and not controller_blocked and creator_pad:wants(input)and type(host.consume_creator)=='function'then
+    creator_pad:activate()
+    local called,ok,why=pcall(host.consume_creator)
+    captured=called and ok==true;reason=called and why or ok
+    if not captured then
+     controller_blocked=true;creator_pad:reset()
+     if host.notice then host.notice('Controller navigation unavailable; mouse controls remain available. '..tostring(reason))end
+     captured,reason=consume()
+    end
+   else captured,reason=consume()end
    if not captured then armed=nil;clear_confirm();panel:clear();return nil,'Native input capture is unavailable: '..tostring(reason or 'capture rejected')end
    -- Keep the capture through drag-off, focus loss, and confirmation release.
    -- A fresh host capture request wins over a neutral mouse-only sample.
@@ -178,6 +204,7 @@ function M.new(state_api,wizard_api,panel,host)
    selected_variant=nil
    return true
   end
+  if action and action.type=='open'then controller_blocked=nil;focused_look=nil end
   if action and action.type=='open'and not consume()then return nil,'Native input capture is unavailable' end
   if action and action.type=='open'and host.begin_creation then
    local ready,why=host.begin_creation();if not ready then return nil,why end
@@ -211,8 +238,27 @@ function M.new(state_api,wizard_api,panel,host)
  end
  function self:draw(sample,input)
   local domain,display=context();last_view=self:view()
+  local page_size=last_view.open and panel.controller_capacity and panel:controller_capacity(last_view,sample)or 3
+  local controller_action
+  if controller_blocked then creator_pad:reset();last_view.controller_notice='Use mouse controls (controller unavailable).'
+  else controller_action=creator_pad:update(last_view,input,click_time(),page_size)end
+  creator_pad:decorate(last_view,page_size)
+  local focus=last_view.controller_mode and last_view.controller_native_looks and last_view.controller_focus
+  if focus and focus.type=='select_look'and focus.id~=focused_look and host.focus_look then
+   local ok,ready,why=pcall(host.focus_look,focus.id)
+   if ok and ready then focused_look=focus.id
+   else controller_action=nil;if host.notice then host.notice(ok and why or ready)end end
+  elseif not(last_view.open and last_view.step==1)then focused_look=nil end
   local shown=panel:draw(sample,last_view,display)
-  if not shown or not input then previous=nil;armed=nil;clear_confirm();clear_double();return shown end
+  if not shown or not input then creator_pad:interrupt();previous=nil;armed=nil;clear_confirm();clear_double();return shown end
+  if controller_action then
+   local ok,why=self:action(controller_action)
+   if not ok and host.notice then host.notice(why)end
+   last_view=self:view()
+   creator_pad:update(last_view,input,click_time(),panel.controller_capacity and panel:controller_capacity(last_view,sample)or 3)
+   previous=input.down;armed=nil;clear_confirm();clear_double()
+   return true
+  end
   -- A double-click may finish before preview readback. Wait briefly for the
   -- same selection to become ready; never carry intent across focus/navigation.
   if double_apply then
@@ -253,6 +299,7 @@ function M.new(state_api,wizard_api,panel,host)
     if action then
      local ok,why=self:action(action)
      if not ok and host.notice then host.notice(why)end
+     if ok and action.type=='open'then creator_pad:activate()end
      if ok and host.controller_confirmed then host.controller_confirmed(input.controller_source)end
     end
    end
@@ -299,6 +346,7 @@ function M.new(state_api,wizard_api,panel,host)
      if host.report then host.report('ui.double_click',action_key(apply))end
     else
      clear_double()
+     creator_pad:mouse_action(action,last_view,page_size)
      ok,why=self:action(action)
      if ok and card and now then last_click={key=action_key(action),at=now,x=input.x,y=input.y}end
     end
@@ -315,10 +363,10 @@ function M.new(state_api,wizard_api,panel,host)
  function self:leave()
   local domain,display=host.current()
   if domain and display then wizard:action(domain,display,{type='cancel'})end
-  panel:clear();previous=nil;armed=nil;last_view=nil;selected_variant=nil;native_navigation=false;clear_confirm();clear_double()
+  panel:clear();creator_pad:reset();previous=nil;armed=nil;last_view=nil;selected_variant=nil;native_navigation=false;clear_confirm();clear_double()
   if host.end_creation then host.end_creation()end
  end
- function self:clear()panel:clear();previous=nil;armed=nil;clear_confirm();clear_double()end
+ function self:clear()panel:clear();creator_pad:interrupt();previous=nil;armed=nil;clear_confirm();clear_double()end
  function self:clear_selected_variant()selected_variant=nil;clear_double();return true end
  function self:automation_snapshot()
   return {view=self:view(),regions=panel.regions or {}}

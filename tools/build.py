@@ -20,9 +20,9 @@ DESCRIPTION = ('Owned armor variants with independent appearance, base stats and
                'Native stat/perk previews and one-button equipment in the Armor list. '
                'Create saves locally without equipping the armor.')
 
-def bundle(stats_follow_look=False):
+def bundle(stats_follow_look=False, passive_preview_icons=True, helmet_transmog=False):
     chunks = ['-- HD2-Addon: ' + NAME + '\n']
-    for variable, filename in [('Diagnostics','diagnostics.lua'), ('State','state.lua'), ('EquippedState','equipped_state.lua'), ('ControllerInput','controller_input.lua'), ('Platform','platform.lua'),
+    for variable, filename in [('Diagnostics','diagnostics.lua'), ('State','state.lua'), ('EquippedState','equipped_state.lua'), ('ControllerInput','controller_input.lua'), ('CreatorController','creator_controller.lua'), ('Platform','platform.lua'),
                                ('AppearanceRegistry','appearance_registry.lua'),
                                ('CompatSpec','compat_spec.lua'),
                                ('CatalogCompat','catalog_compat.lua'),
@@ -72,6 +72,10 @@ def bundle(stats_follow_look=False):
     source=''.join(chunks)
     if stats_follow_look:
         source=source.replace('local STATS_FOLLOW_LOOK = false', 'local STATS_FOLLOW_LOOK = true', 1)
+    if not passive_preview_icons:
+        source=source.replace('local PASSIVE_PREVIEW_ICONS = true', 'local PASSIVE_PREVIEW_ICONS = false', 1)
+    if helmet_transmog:
+        source=source.replace('local HELMET_TRANSMOG = false', 'local HELMET_TRANSMOG = true', 1)
     build_id=hashlib.sha256(source.encode()).hexdigest()[:16]
     return source.replace("build='source'", "build='"+build_id+"'", 1)
 
@@ -94,31 +98,43 @@ def main():
     build_addon(NAME,source.encode(),GUID,package,TITLE)
     with zipfile.ZipFile(package) as z:
         files={n:z.read(n) for n in z.namelist()}
-    # Mutually exclusive suboptions: Arsenal enables the first on fresh import,
-    # even when its global 'enable all options' preference is enabled.
-    alternate = out/'transmog-look-stats.zip'
-    alternate_source = bundle(stats_follow_look=True)
-    subprocess.run(['luajit','-e','assert(loadstring(io.read("*a")))'],
-                   input=alternate_source,text=True,check=True)
-    build_addon(NAME,alternate_source.encode(),GUID,alternate,TITLE)
-    with zipfile.ZipFile(alternate) as z:
-        for name in z.namelist():
-            if name.startswith('Addon/'):
-                files[name.replace('Addon/', 'LookStats/', 1)]=z.read(name)
-    alternate.unlink()
+    # The main addon is always included by its group. Each independent setting
+    # has its own boolean resource; none replaces another setting or the addon.
+    from archive import ARCHIVE, make_archive, resource_hash
+    import struct
+    for folder,setting,value in [('IndependentStats','stats_follow_look',False),('LookStats','stats_follow_look',True),
+                                 ('HelmetOff','helmet_transmog',False),('HelmetOn','helmet_transmog',True),
+                                 ('PassiveIconsOn','passive_preview_icons',True),('PassiveIconsOff','passive_preview_icons',False)]:
+        # Very short Lua payloads crash the native resource loader before any
+        # addon executes (reproduced with 12/13-byte option scripts). Keep each
+        # independent setting above the live-tested 1 KiB source size.
+        payload=(b'-- Transmog configuration resource.\n'+b'-- '+b' '*1024+b'\n'
+                 +('return '+str(value).lower()+'\n').encode())
+        resource=struct.pack('<II',len(payload),2)+payload
+        files[folder+'/'+ARCHIVE]=make_archive({resource_hash('mods/hd2transmog/options/'+setting):resource})
+        for suffix in ('.stream','.gpu_resources'):
+            files[folder+'/'+ARCHIVE+suffix]=b''
     manifest=json.loads(files['manifest.json'])
     manifest['IconPath']='mod-icon.png'
     files['mod-icon.png']=(ROOT/'assets/mod-icon.png').read_bytes()
     manifest['Description']=DESCRIPTION
-    manifest['Options'][0]['Description']=DESCRIPTION
-    manifest['Options'][0]['Image']='mod-icon.png'
-    manifest['Options'][0]['Include']=[]
-    manifest['Options'][0]['SubOptions']=[
-        {'Name':'Independent armor stats (default)',
-         'Description':'Create in three stages: look, base stats, passive.', 'Include':['Addon'], 'Image':'mod-icon.png'},
-        {'Name':'Disable armor stat selection',
-         'Description':'Create in two stages: look and passive. The chosen look supplies its base stats. Existing variants are unchanged.',
-         'Include':['LookStats'], 'Image':'mod-icon.png'},
+    def choice(name,folder,description):
+        return {'Name':name,'Description':description,'Include':[folder],'Image':'mod-icon.png'}
+    # Arsenal selects each enabled group's first choice on import. Defaults are
+    # also correct when its global enable-all preference enables every group.
+    manifest['Options']=[
+        {'Name':TITLE,'Description':'Armor creation process. Helmet and icon settings are independent.',
+         'Include':['Addon'],'Image':'mod-icon.png','SubOptions':[
+             choice('Independent armor stats (default)','IndependentStats','Choose look, base stats, then passive.'),
+             choice('Disable armor stat selection','LookStats','Choose look and passive; the look supplies base stats.')]},
+        {'Name':'Helmet transmog','Description':'Optional experimental helmet variant editor. Off by default.',
+         'Include':[],'Image':'mod-icon.png','SubOptions':[
+             choice('Off (default)','HelmetOff','Disable helmet transmog and current helmet identity/category checks.'),
+             choice('On','HelmetOn','Enable the editor for supported modified helmets.')]},
+        {'Name':'Armor thumbnail passive icons','Description':'Show or hide passive badges on armor thumbnails. On by default.',
+         'Include':[],'Image':'mod-icon.png','SubOptions':[
+             choice('On (default)','PassiveIconsOn','Show passive badges on armor thumbnails.'),
+             choice('Off','PassiveIconsOff','Hide thumbnail badges; passive-selection and detail-panel icons stay visible.')]},
     ]
     files['manifest.json']=(json.dumps(manifest,indent=2)+'\n').encode()
     files['THIRD-PARTY-LICENSES.txt']=(ROOT/'vendor/LuaJIT-disassembler/COPYRIGHT').read_bytes()
@@ -135,17 +151,24 @@ def main():
         'Select +, choose an owned look, base stats, then an owned passive, and Create.\n'
         'Optional: in Arsenal Options select Disable armor stat selection, deploy with the game closed, then restart.\n'
         'This uses two stages (look and passive); the look supplies base stats. Existing variants are unchanged.\n'
+        'Passive badges on armor thumbnails are ON by default. Set Armor thumbnail passive icons to Off to hide them.\n'
+        'Passive-selection and detail-panel icons are unaffected; armor stats and effects are unchanged.\n'
+        'Creator mode, Helmet transmog and Armor thumbnail passive icons are independent settings.\n'
+        'After updating from combined options, reselect your creator mode and both On/Off settings once, then deploy and restart.\n'
         'Base-stat choices exclude donor passive bonuses and are sorted by armor rating.\n'
         'Create saves locally and does not equip or change the worn armor.\n'
-        'Optional DiverKit Alpha 8.8.1 compatibility is detected automatically; DiverKit is not required.\n'
+        'Optional DiverKit Alpha 8.8.1 / 8.10.1 compatibility is detected automatically; DiverKit is not required.\n'
         'Equip each custom variant in Transmog, then save/overwrite its DiverKit preset to capture its exact stats and passive.\n'
         'Old DiverKit presets must be saved again. Excluding Armor leaves it unchanged; unknown interfaces disable compatibility.\n'
         'Select a saved card to preview its look in the original stat/perk panels.\n'
         'Click Apply or press and release controller A (XInput/Steam Input) on a ready selected armor.\n'
-        '0.1.3: controller A opens the focused + Create card on release.\n'
-        'Deleting a worn variant selects an ordinary owned armor; Apply safely restores the old carrier and equips it.\n'
+        '0.1.3: complete controller creation using the native look grid, independent Arsenal settings and selection recovery fixes.\n'
+        'Creator controls: D-pad/left stick moves focus; A selects; B goes back; Y cancels; LB/RB pages choices.\n'
+        'Left/right switches choices and buttons. Final Create needs a separate confirmation and never equips armor.\n'
+        'After deleting a worn variant, select an ordinary owned armor and Apply to restore the old carrier and equip it.\n'
         'Includes the optional stat-selection mode, optional DiverKit adapter, and closer facemask icon.\n'
-        'Helmet-passive compatibility is detected from actual gameplay data; normal helmets remain unchanged.\n'
+        'Helmet transmog is OFF by default. Set Helmet transmog to On in Arsenal Options to enable it, deploy and restart.\n'
+        'When enabled, supported modified helmets are detected from gameplay data. Unknown worn gear is logged without blocking browsing.\n'
         'The optional helmet editor is an initial path; live combat stacking and numeric helmet previews remain unverified.\n'
         'Install as an update to Transmog; do not enable a second copy. Existing variants are retained.\n'
         'After reproducing an issue, send HD2Transmog.log, HD2Transmog.previous.log, BingusSharedLoader.log and Transmog/STATUS.txt.\n'

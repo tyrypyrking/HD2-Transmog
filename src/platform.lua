@@ -342,7 +342,10 @@ function M.new(loader, engine, natives)
             down = value == true or (type(value) == 'number' and value > 0)
         end
         return {x=x,y=y,down=down,confirm_down=pad and pad.confirm_down,
-            controller_source=pad and pad.controller_source,cursor_inside=cursor_inside}
+            controller_source=pad and pad.controller_source,cursor_inside=cursor_inside,
+            back_down=pad and pad.back_down,cancel_down=pad and pad.cancel_down,
+            page_prev_down=pad and pad.page_prev_down,page_next_down=pad and pad.page_next_down,
+            nav_x=pad and pad.nav_x,nav_y=pad and pad.nav_y}
     end
 
     -- -- now -------------------------------------------------------------------

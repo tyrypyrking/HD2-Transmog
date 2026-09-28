@@ -168,3 +168,19 @@ host.new_refresh=original
 apply('First',{appearance_id=A,stats_id='stats-c',passive_variant_id='perk-a'},1)
 assert(session:export_equipped(A).label=='First')
 """)
+
+
+def test_latest_diverkit_ownership_recheck_is_honored_before_native_writes():
+    run(FIXTURE+r'''
+local original=api.preflight
+local checks=0
+api.preflight=function(...)
+ local plan=original(...)
+ plan.check_ownership=function()checks=checks+1;if checks>=2 then error('fresh progression changed')end end
+ return plan
+end
+local observed=assert(bridge.snapshot())
+local ok,why=pcall(bridge.commit_owned,D,observed)
+assert(not ok and tostring(why):find('fresh progression changed'))
+assert(write_calls==0 and native_calls==0 and checks==2)
+''')

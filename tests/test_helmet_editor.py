@@ -55,3 +55,29 @@ result.capabilities.helmet_transmog_enabled=false
 assert(not editor:draw(sample,snapshot,result,{x=0,y=0,down=false}))
 editor:before({x=0,y=0,down=true});assert(consumed==0)
 ''')
+
+
+
+def test_main_helmet_editor_requires_explicit_config_even_with_detected_helmets():
+ from test_creator_failure_main import run as run_main
+ setup="""
+helmet_created=0;helmet_drawn=0
+result.helmets={capabilities={helmet_transmog_enabled=true}}
+local snapshot=grid.snapshot
+function grid:snapshot(...)
+ local value=snapshot(self,...);value.native_category=1;return value
+end
+HelmetEditor={new=function()
+ helmet_created=helmet_created+1
+ return {draw=function()helmet_drawn=helmet_drawn+1 end,clear=function()end,
+  before=function()end,is_active=function()return false end}
+end}
+"""
+ for enabled in (False,True):
+  run_main("""
+for i=1,5 do advance()end
+assert(helmet_created=="""+('1' if enabled else '0')+""")
+assert((helmet_drawn>0)=="""+('true' if enabled else 'false')+""")
+assert(logged_count('runtime.error=')==0)
+assert(native_updates>0)
+""",setup=setup,helmet_transmog=enabled)

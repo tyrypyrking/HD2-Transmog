@@ -27,11 +27,11 @@ def test_cz_to_original_and_back_updates_saved_selection_without_saving():
     run('''
 advance();assert(flow:view().selected_variant.label=='Existing')
 nav_group=1;nav_index=2;advance()
-assert(not flow:view().selected_variant and browses==1 and cancel_previews==1)
+assert(not flow:view().selected_variant and browses==1 and cancel_previews==2)
 for i=1,5 do advance()end
 assert(browses==1 and save_count==0)
 nav_group=0;nav_index=0;advance()
-assert(flow:view().selected_variant.label=='Existing'and selects==2 and cancel_previews==2)
+assert(flow:view().selected_variant.label=='Existing'and selects==2 and cancel_previews==3)
 assert(save_count==0 and files['transmog.state']==saved_before and session_created==1)
 ''',automatic=True,setup=NAV)
 
@@ -43,7 +43,7 @@ advance();assert(browses==0 and cancel_previews==1 and not flow:view().selected_
 nav_missing=false;session_busy=true;advance()
 assert(browses==0 and cancel_previews==1)
 session_busy=false;advance()
-assert(browses==1 and cancel_previews==1 and not flow:view().selected_variant)
+assert(browses==1 and cancel_previews==2 and not flow:view().selected_variant)
 assert(save_count==0 and session_created==1)
 ''',automatic=True,setup=NAV)
 

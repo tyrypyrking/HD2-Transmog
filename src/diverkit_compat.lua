@@ -59,22 +59,47 @@ local function fingerprint(fn)
  return string.format('%08x',hash)
 end
 M.fingerprint=fingerprint
--- Normalized LuaJIT prototypes of the inspected Alpha 8.8.1 source.
+-- Normalized LuaJIT prototypes of the inspected supported DiverKit sources.
 -- Table constants are sorted because string.dump order varies between runs.
+-- Embedded 2.1-alpha profiles were measured inside the actual game runtime;
+-- desktop LuaJIT instruction layouts are not treated as interchangeable.
 -- Unknown builds fail closed instead of borrowing unverified private methods.
 local supported={
- MODEL_HASHES={new='f52dad72',mask='8d968f67',compose='0a85fcfb',copy_snapshot='681281cc',validate_snapshot='9091224e'},
+ {name='Alpha 8.8.1',interfaces={
+ MODEL_HASHES={validate='ff56980c',new='f52dad72',mask='8d968f67',compose='0a85fcfb',copy_snapshot='681281cc',validate_snapshot='9091224e'},
  APPLY_HASHES={new='2b86d0de',profile_differences='6ab384ec',bind='54a891ec',preflight='1425abae',session='ec5254ae',differences='da4b5661'}
+}},
+ {name='Alpha 8.10.1',interfaces={
+ MODEL_HASHES={validate='90961b17',new='48be6686',compose='0a85fcfb',mask='8d968f67',copy_snapshot='681281cc',validate_snapshot='9091224e'},
+ APPLY_HASHES={preflight='26dc89dd',new='bc4bbf6b',bind='54a891ec',ownership='6d0e6414',profile_differences='6ab384ec',differences='da4b5661',session='ec5254ae'}
+}},
+ {name='Alpha 8.8.1 (embedded LuaJIT)',interfaces={MODEL_HASHES={validate='e3c91607',new='64e51766',mask='87f4dc89',validate_snapshot='6d2d4b0c',compose='40d0fd45',copy_snapshot='50b0336e'},APPLY_HASHES={new='686dae9e',preflight='56c406a8',session='3da9e6ca',bind='80ea0e11',differences='d1e20890',profile_differences='8f74056c'}}},
+ {name='Alpha 8.10.1 (embedded LuaJIT)',interfaces={MODEL_HASHES={validate='bd9c62ea',new='612cbc86',mask='87f4dc89',validate_snapshot='6d2d4b0c',compose='40d0fd45',copy_snapshot='50b0336e'},APPLY_HASHES={new='4989dbab',preflight='8605baa6',session='3da9e6ca',bind='80ea0e11',differences='d1e20890',profile_differences='8f74056c',ownership='0dc0be66'}}},
 }
 function M.supported(model,apply)
- for name,wanted in pairs(supported.MODEL_HASHES)do
-  local actual=fingerprint(model[name]);if actual~=wanted then return false,'Model.'..name..':'..tostring(actual)end
+ for name,expected in pairs({fields={'primary','pistol','grenade','armor','cape','helmet'},
+  categories={'primary','pistol','grenade','armor','helmet','cape','stratagems','booster','title','player_card'}})do
+  local actual=model[name]
+  if type(actual)~='table'or #actual~=#expected then return false,'Model.'..name end
+  for i,value in ipairs(expected)do if actual[i]~=value then return false,'Model.'..name end end
  end
- for name,wanted in pairs(supported.APPLY_HASHES)do
-  local actual=fingerprint(apply[name]);if actual~=wanted then return false,'Apply.'..name..':'..tostring(actual)end
+ local observed={MODEL_HASHES={},APPLY_HASHES={}}
+ local reason
+ for _,profile in ipairs(supported)do
+  local matches=true
+  for group,methods in pairs(profile.interfaces)do
+   local api=group=='MODEL_HASHES'and model or apply
+   for name,wanted in pairs(methods)do
+    local actual=observed[group][name]
+    if actual==nil then actual=fingerprint(api[name])or false;observed[group][name]=actual end
+    if actual~=wanted then matches=false;reason=group..'.'..name..':'..tostring(actual)end
+   end
+  end
+  if matches then return true,profile.name end
  end
- return next(supported.MODEL_HASHES)~=nil and next(supported.APPLY_HASHES)~=nil
+ return false,reason
 end
+
 function M.find(root,state)
  local seen,queue={},{{fn=root,depth=0}};local at=1
  while at<=#queue and at<=128 do
@@ -132,7 +157,7 @@ function M.attach(binding,host)
   if operations[instance]then return instance end
   local original_start,original_poll,original_cancel=instance.start,instance.poll,instance.cancel
   local state={};operations[instance]=state
-  local methods={session=apply.session,preflight=apply.preflight,bind=apply.bind,profile_differences=apply.profile_differences}
+  local methods={session=apply.session,preflight=apply.preflight,bind=apply.bind,profile_differences=apply.profile_differences,ownership=apply.ownership}
   local driver={model=model,apply=apply,context=context,capture=binding.raw_capture,report=reporter or function()end,
    current=function()
     for name,fn in pairs(methods)do if apply[name]~=fn then return false end end
@@ -220,7 +245,7 @@ function M.attach(binding,host)
   for i=#restorations,1,-1 do local r=restorations[i];if r.t[r.k]==r.fn then r.t[r.k]=r.old end end
   self.status='detached'
  end
- report('attached','Alpha 8.8.1 Lua adapter')
+ report('attached',(binding.version or 'verified')..' Lua adapter')
  return self
 end
 function M.new(host)
@@ -246,6 +271,7 @@ function M.new(host)
    if host.report then host.report('diverkit.unsupported','Unrecognized Lua interfaces; compatibility adapter disabled: '..tostring(reason))end
    return
   end
+  binding.version=reason
   attached=M.attach(binding,host);self.status='attached'
  end
  function self:busy()return attached and attached:busy()or false end

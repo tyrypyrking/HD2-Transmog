@@ -448,3 +448,12 @@ assert(saves==1 and #commits==1 and s.phase=='equipped')
 local found=false;for _,line in ipairs(logs)do if line.key=='variant.persistence_failed'then found=true end end
 assert(found)
 ''')
+
+
+def test_native_base_stats_proof_requires_the_exact_active_donor():
+    run_lua(FIXTURE+r'''
+ready(0);equip(2)
+assert(s:verify_base_stats(B,request.stats_id))
+assert(not s:verify_base_stats(A,request.stats_id))
+assert(not s:verify_base_stats(B,'native-stats:00000003'))
+''')

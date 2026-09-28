@@ -42,7 +42,8 @@ function grid:snapshot()
  return {kind=4,native_view_mode=0,identity_mapping_verified=true,selected_kit_id=focus_id,
  logical_selected_index=focus_index,appearance_previews={},headers={},scroll=0,
  item_count=3+custom_count,widgets={{logical_index=focus_index,bound_owned_kit_id=focus_id,
- root_viewport_rect={x=200,y=400,w=100,h=100}}}}
+ root_viewport_rect={x=200,y=400,w=100,h=100}},
+ {logical_index=custom_count+1,bound_owned_kit_id=B,root_viewport_rect={x=300,y=400,w=100,h=100}}}}
 end
 NativeGridPresentation.new=function()
  local object={phase='idle'}
@@ -137,4 +138,15 @@ def test_deletion_recovery_does_not_require_a_third_owned_armor():
 result.owned[C]=false
 assert(flow:action{type='apply_variant',id=B})
 """,1)
+    run(code)
+
+
+def test_deletion_with_only_saved_cards_visible_waits_for_explicit_vanilla_selection():
+    code=exercise(r'''
+local snapshot=grid.snapshot
+function grid:snapshot(...)
+ local s=snapshot(self,...);s.widgets={s.widgets[1]};return s
+end
+''')
+    code=code.replace("local view=flow:view()\nassert(view.native_override", "assert(not flow:view().native_override and not flow:view().apply_pending)\nassert(flow:action{type='select_native_look',id=B,index=custom_count+1})\nfor i=1,15 do menu_tick()end\nlocal view=flow:view()\nassert(view.native_override")
     run(code)

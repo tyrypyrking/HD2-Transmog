@@ -2,13 +2,13 @@
 
 Version **0.1.3** — combine an owned armor appearance, an owned base-stat profile, and an owned passive in Helldivers 2. Requires **Bingus Shared Loader v15+ / API 1**.
 
-Release **0.1.3** fixes controller A on the focused **+ Create** card and provides a safe vanilla-armor recovery selection after deleting an equipped variant. It also includes the optional two-stage creator, optional DiverKit compatibility, a closer facemask icon, and data-driven support for modded helmets with passives. Neither DiverKit nor a helmet-passive mod is required; normal helmets remain unchanged.
+This release adds complete controller creation using the native armor thumbnail grid, fixes selection and equipment recovery after deleting a worn variant, and supports optional DiverKit Alpha **8.8.1 / 8.10.1** compatibility. Neither DiverKit nor a helmet-passive mod is required.
 
-Install this as an update to the existing mod. Saved variants are retained. Diagnostic logging is automatic; no debug marker is required. The stat switch, updated icon and DiverKit adapter passed user QA. The release passes **1,012 automated tests**, with 9 optional checks skipped. The two new fixes and optional helmet support have automated regression coverage; broader live helmet behavior and combat stacking remain unverified.
+Arsenal provides three independent settings: armor stats are independent by default, helmet transmog is off by default, and armor-thumbnail passive badges are on by default. Disabling stat selection makes creation a two-stage process: look and passive, with base stats inherited from the look. Hiding thumbnail badges keeps passive-selection and detail icons visible.
 
-The latest source also discards grid snapshots and thumbnail observations before rebuilding or restoring the native list, whose Clear operation releases the old thumbnail resources. A regression reproduces the previous stale-snapshot drawing path. Construction tests cover one through eight saved cards with repeated appearances and both Create-card policies. Additional checkpoints bracket native list construction and initial selection. User QA on 2026-09-28 with build `1ffbe3e94298295e` passed startup restoration, seven new variant creations and a final equip without reported crashes or issues. Logs confirm eight successful presentation builds, no presentation retirements, and shutdown. One zero-length grid observation was rejected during initial entry and recovered before construction. This session does not establish a fix for other players' reported crashes.
+Controller controls: **D-pad or left stick** moves focus; **A** selects or activates the focused button; **B** goes back (cancels at the first step); **Y** cancels; **LB/RB** changes choice pages. Look selection shares the native thumbnail grid with the mouse. In the stats/passive lists, left/right moves between choices and action buttons. Selecting a passive focuses **Create**, which requires a separate A confirmation. Creation never equips armor.
 
-Presentation diagnostics identify the first changed model component (geometry, counts, grouping, offers or flags), distinguish category and view changes, and record build duration and automatic preview selection. Observation failures include rejected read bounds and a recovery event when sampling resumes. These events add no per-frame log writes; flushed construction checkpoints can add menu-opening or rebuild cost.
+User QA confirmed navigation and configuration behavior on the final candidate. Automated validation passes **1,050 tests**, with 9 optional checks skipped. The release includes the startup resource-size fix verified by autonomous startup, Armory entry and controller navigation tests. Diagnostics and game captures remain private and excluded from distribution.
 
 ## Use
 
@@ -19,7 +19,7 @@ Presentation diagnostics identify the first changed model component (geometry, c
 
 Create saves a variant without equipping it. Saved cards use the native preview, stat bars, and passive descriptions. Their names identify the appearance and passive. Base-stat choices exclude the donor's passive bonus; the selected passive is applied separately.
 
-The creator, card clipping, and mouse Apply regions follow the native Armory's centered UI canvas on ultrawide displays. Layout and mouse-interaction regressions cover eight resolutions through 5120×1440, including live window resizing; live layout checks used 2400×1000 and 2400×675 (32:9). Use mouse Apply or press and release A on a ready selected armor with an XInput/Steam Input controller. Controller A was verified by user QA. Controller focus is checked against the native card; held buttons, focus loss, device changes and changed selections cancel confirmation. Creation remains mouse-driven; keyboard confirmation and other controller backends are not covered.
+The creator, card clipping, and mouse Apply regions follow the native Armory's centered UI canvas on ultrawide displays. Layout and mouse-interaction regressions cover eight resolutions through 5120×1440, including live window resizing; live layout checks used 2400×1000 and 2400×675 (32:9). Use mouse Apply or press and release A on a ready selected armor with an XInput/Steam Input controller. Controller focus is checked against the native card; held buttons, focus loss, device changes and changed selections cancel confirmation. Keyboard confirmation and non-XInput controller backends are not covered.
 
 After a verified armor change, Equip uses the native green equipped state and the vanilla equipment-selection sound routine for the equipped item and menu context. Helmet and Cape tab clicks remain available while browsing or creating; an armor change already in progress must finish before switching tabs.
 
@@ -33,11 +33,13 @@ Reduced Armor-menu work by reusing unchanged display choices and decoded offer d
 
 Final user QA on 2026-09-28 passed with only Bingus Shared Loader and the normal 0.1.2 build installed: creation, mouse/controller equipping, equipped-state feedback and sound, menu navigation, ultrawide layout, pre-mission use, restart restoration, and variant removal. The remaining Armor-menu overhead was accepted. That release passed 934 offline tests, with 9 optional checks skipped. The specific double-passive glitch remains untested in an affected live environment.
 
-Creator base-stat choices now read the verified body type independently of the worn passive cache. Unknown cached passive data no longer blocks that read; full equipment validation still applies when equipping. Missing stat evidence shows a diagnostic message and transient read failures are retried. This addresses a failure path consistent with the reported double-passive issue; further glitch-specific validation is deferred.
+Creator base-stat choices now read the verified body type independently of the worn passive cache. Unknown cached passive data no longer blocks that read. Unknown worn armor IDs/categories and cached passives are logged for investigation without blocking browsing. Helmet identity/category diagnostics run only with helmet transmog enabled; cape IDs are never classified. All observed IDs still participate in freshness and non-body preservation checks, and writes require verified owned target/donor records. Missing stat evidence shows a diagnostic message and transient read failures are retried. This addresses a failure path consistent with the reported double-passive issue; further glitch-specific validation is deferred.
 
-## Helmet variants (development)
+## Optional helmet variants
 
-The ship Armory shows a **Helmet Variants** editor only when verified helmet records contain a passive effect or differ from the reference passive/weight data. Vanilla helmets leave it hidden. Detection reads the native passive definition, including changed existing effects and additional enum entries within the verified table bounds; it does not identify or depend on any particular mod.
+Helmet transmog is **off by default**. In Arsenal Options, set **Helmet transmog → On**, deploy with the game closed, and restart. This On/Off setting is independent of the armor creation process and passive icons.
+
+When enabled, the ship Armory shows a **Helmet Variants** editor only when verified helmet records contain a passive effect or differ from the reference passive/weight data. Vanilla helmets leave it hidden. Detection reads the native passive definition, including changed existing effects and additional enum entries within the verified table bounds; it does not identify or depend on any particular mod.
 
 Choose **New**, then an owned helmet look, base-weight donor and passive. **Save variant** stores the definition separately in `helmets.state`; **Saved** reopens those definitions. To **Prepare**, wear and select another helmet first. Then select the chosen look in the native Helmet list and use the game's normal **Apply**. To **Reset**, wear and select a different helmet first. Preparation preserves the look's package, resources and material bytes and copies the selected passive and compatible helmet weights. Body-armor donors are never offered in this editor.
 
@@ -72,17 +74,19 @@ Import `dist/HD2-Transmog-Foundation-0.1.3.zip` through Arsenal as the existing 
 
 Arsenal **Options → HD2 Transmog Foundation → Disable armor stat selection** is an optional two-stage creator: choose a look, then a passive. The look supplies its own base stats; the selected passive is applied independently. **Independent armor stats (default)** keeps the existing three-stage creator. Select one mode, deploy with the game closed, and restart. Existing saved variants keep their original stats in either mode.
 
+Armor thumbnail passive badges are **on by default**. In Arsenal Options, set **Armor thumbnail passive icons → Off** to hide badges on original and custom armor thumbnails. This On/Off setting is independent of creator mode and helmet transmog. Passive-selection and detail-panel icons remain visible. Deploy with the game closed and restart to change the setting. When updating from the earlier combined choices, reselect the creator mode and both On/Off settings once; Arsenal cannot translate the old combined choices into separate settings.
+
 The mod identity and body-armor saved-state format are unchanged in 0.1.3. Existing saved variants are retained. State is stored under `%LOCALAPPDATA%/CowboyBingus/Helldivers2/Transmog`; diagnostics are in `STATUS.txt` and the sibling `Logs/HD2Transmog.log`. Corrupt or unreadable state is preserved rather than discarded.
 
 ## Optional DiverKit compatibility
 
-Transmog automatically attaches its compatibility adapter when supported DiverKit Alpha 8.8.1 Lua interfaces are present. DiverKit is not required: without it, Transmog uses its normal creator and equipment flow. Unrecognized DiverKit interfaces disable the adapter and are reported in `HD2Transmog.log`.
+Transmog automatically attaches its compatibility adapter when supported DiverKit Alpha 8.8.1 or 8.10.1 Lua interfaces are present. DiverKit is not required: without it, Transmog uses its normal creator and equipment flow. Unrecognized DiverKit interfaces disable the adapter and are reported in `HD2Transmog.log`.
 
 After updating, equip each custom variant through Transmog and save or overwrite its DiverKit preset. Older DiverKit presets contain only an ordinary armor ID and cannot recover their original custom stats/passive automatically. Newly saved presets retain the exact variant definition, including different variants using the same look. Keep the corresponding Transmog variant; removed or changed definitions require saving the DiverKit preset again.
 
 When a preset includes Armor, DiverKit first finishes its other equipment changes, then Transmog performs and verifies its guarded armor change. Excluding Armor leaves it untouched. Ordinary armor presets restore the original armor composition. Cancellation, lost ownership, changed menus, or failed verification report an incomplete application rather than success.
 
-For QA, test both mods together with two different looks, two variants sharing a look, an ordinary armor preset, and a preset with Armor excluded. Then disable DiverKit and verify normal Transmog creation, equipping, and restart restoration. The new adapter still needs live-game QA; offline coverage includes the installed DiverKit source's save path and synthetic native equipment transitions.
+For QA, test both mods together with two different looks, two variants sharing a look, an ordinary armor preset, and a preset with Armor excluded. Then disable DiverKit and verify normal Transmog creation, equipping, and restart restoration. The 8.8.1 adapter passed user QA; the updated 8.10.1 path still needs live-game QA; offline coverage includes the installed DiverKit source's save path and synthetic native equipment transitions.
 
 ## Reporting problems
 
@@ -90,7 +94,7 @@ Use the [issue forms](https://github.com/tyrypyrking/HD2-Transmog/issues/new/cho
 
 ## Compatibility and limits
 
-Existing handling of unusual loadouts is retained. Helmet transmog uses observed helmet data and does not require a named provider, loader order declaration, or companion-mod API.
+Existing handling of unusual loadouts is retained. Unfamiliar current equipment produces bounded, deduplicated diagnostics instead of an equipment-category error in the UI. Helmet transmog is opt-in and uses observed helmet data; it does not require a named provider, loader order declaration, or companion-mod API.
 
 Ownership is rechecked before saving or applying. The current catalog supports up to 120 saved variants. Unknown records become unavailable without deleting saved definitions.
 

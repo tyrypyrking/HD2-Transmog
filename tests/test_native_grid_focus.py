@@ -26,7 +26,7 @@ local bridge={capabilities={exact_index_focus_verified=true,row_focus_verified=t
  focus_exact=function(plan)
   mutated=mutated+1;after=clone(model);local target=plan.to
   after.selected_index=target.index;after.selected_row=target.row;after.selected_column=target.column
-  after.selected_group=target.group;after.selected_offer=target.offer_id;after.focus_view.selected_slot=target.visible_slot
+  after.selected_group=target.group;after.selected_offer=target.offer_id;after.selected_offer_matches=true;after.focus_view.selected_slot=target.visible_slot
   return true
  end,
  readback=function()return after end}
@@ -97,5 +97,23 @@ model.rows[2].first_item=2;assert(not focus:select(model,2,A));model.rows[2].fir
 model.focus_view.logical_rows={0,0};assert(not focus:select(model,2,A));model.focus_view.logical_rows={0,1}
 model.focus_view.selected_slot=1;assert(not focus:select(model,2,A));model.focus_view.selected_slot=0
 model.offers[3].owned=false;assert(not focus:select(model,2,A))
+assert(captured==0 and mutated==0)
+''')
+
+
+def test_controller_cursor_can_reconcile_a_lagging_known_offer_mirror():
+    run_lua(FIXTURE+r'''
+model.selected_index=4;model.selected_row=1;model.selected_column=1;model.selected_group=1
+model.focus_view.selected_slot=1;model.selected_offer_matches=false
+local result=assert(focus:select(model,4,B))
+assert(result.logical_index==4 and after.selected_offer==20 and captured==1 and mutated==1)
+''')
+
+
+def test_mismatched_offer_cannot_authorize_another_cursor_target_or_unknown_offer():
+    run_lua(FIXTURE+r'''
+model.selected_offer_matches=false
+assert(not focus:select(model,4,B))
+model.selected_offer=999;assert(not focus:select(model,0,A))
 assert(captured==0 and mutated==0)
 ''')

@@ -22,7 +22,9 @@ put(manager+0xa7c+128,request)
 put(manager+0x96c+136,request..string.rep('\0',40)..word(0)..word(data.kits[armor].passive_enum)..word(0))
 local valid=true
 local bridge={read=read,verify=function()return valid end,armor_catalog=0x10000,players=0x10008}
-local observer=P.new(bridge,data)
+local logs={}
+local function report(key,value)logs[#logs+1]=key..'='..value end
+local observer=P.new(bridge,data,{report=report})
 '''
 def run(code):
  p=subprocess.run(['luajit','-'],input=PRELUDE+code,text=True,cwd=ROOT,capture_output=True,timeout=10)
@@ -43,7 +45,8 @@ def test_invalid_local_identity_or_layout_fails_closed():
  run(r'''
 put(manager+0x938,word(7));assert(not observer:sample())
 put(manager+0x938,word(8));put(players+0x88,word(2));assert(not observer:sample())
-put(players+0x88,word(1));put(manager+0x96c+136+0x3c,word(0xffffffff));assert(not observer:sample())
+put(players+0x88,word(1));put(manager+0x96c+136,word(2));assert(not observer:sample())
+put(manager+0x96c+136,word(0))
 put(manager+0x96c+136+0x3c,word(data.kits[armor].passive_enum));put(info+16,word(0x7fff));assert(not observer:sample())
 ''')
 
@@ -62,7 +65,8 @@ def test_creator_body_type_does_not_depend_on_cached_passive_or_equipment_ids():
  run(r'''
 put(manager+0x96c+136+0x3c,word(0xffffffff))
 put(manager+0x96c+136+4,word(0xffffffff))
-assert(not observer:sample(),'Apply must still reject unverified equipment/passive')
+local observed=assert(observer:sample());assert(not observed.cache_passive_variant_id)
+assert(P.format(observed):find('cache_passive_variant_id=unknown',1,true))
 local body=assert(observer:sample_body_type())
 assert(body.body_type==0 and body.request_body_type==0 and body.verify())
 put(manager+0x96c+136,word(1))
@@ -80,14 +84,17 @@ put(player+8,word(0xfffffffd));valid=false;assert(not observer:sample_body_type(
 ''')
 
 
-def test_invalid_equipment_error_identifies_source_slot_and_value():
+def test_unknown_checked_equipment_is_logged_once_and_remains_observable():
  run(r'''
+observer=P.new(bridge,data,{helmet_transmog=true,report=report})
 put(manager+0x96c+136+4,word(0xffffffff))
-local value,why=observer:sample()
-assert(not value and why:find('cache.helmet id=ffffffff category=unknown expected=1',1,true))
+local value=assert(observer:sample())
+assert(value.current.helmet_id=='armor:ffffffff'and value.verify())
+assert(#logs==1 and logs[1]:find('cache.helmet id=ffffffff category=unknown expected=1',1,true))
+assert(observer:sample());assert(#logs==1)
 put(manager+0xa7c+128+12,word(helmet))
-value,why=observer:sample()
-assert(not value and why:find('request.armor',1,true)and why:find('category=1 expected=0',1,true))
+assert(observer:sample())
+assert(#logs==2 and logs[2]:find('request.armor',1,true)and logs[2]:find('category=1 expected=0',1,true))
 ''')
 
 
@@ -106,14 +113,30 @@ assert(not observer:sample().settled)
 ''')
 
 
-def test_helmet_exception_does_not_admit_cape_or_unknown_ids_or_wrong_body_category():
+def test_cape_is_opaque_and_helmet_checks_require_explicit_opt_in():
  run(r'''
-put(manager+0x96c+136+4,word(cape));assert(not observer:sample())
-put(manager+0x96c+136+4,word(0xffffffff));assert(not observer:sample())
-put(manager+0x96c+136+4,word(armor))
-put(manager+0x96c+136+8,word(armor));assert(not observer:sample())
-put(manager+0x96c+136+8,word(cape))
-put(manager+0x96c+136+12,word(helmet));assert(not observer:sample())
+put(manager+0x96c+136+4,word(0xffffffff))
+put(manager+0x96c+136+8,word(armor))
+local actor=assert(observer:sample());assert(#logs==0)
+assert(actor.current.helmet_id=='armor:ffffffff'and actor.current.cape_id==actor.cache_armor_id)
+observer=P.new(bridge,data,{helmet_transmog=true,report=report})
+assert(observer:sample());assert(#logs==1 and logs[1]:find('cache.helmet',1,true))
+put(manager+0x96c+136+8,word(0xffffffff))
+assert(observer:sample());assert(#logs==1,'cape must never be classified')
+put(manager+0x96c+136+12,word(0xffffffff))
+assert(observer:sample());assert(#logs==2 and logs[2]:find('cache.armor',1,true))
+assert(not actor.verify(),'opaque IDs still participate in freshness checks')
+''')
+
+
+def test_unknown_equipment_diagnostics_are_bounded_and_logging_failure_is_nonfatal():
+ run(r'''
+for i=1,100 do
+ put(manager+0x96c+136+12,word(i));assert(observer:sample())
+end
+assert(#logs==32)
+observer=P.new(bridge,data,{report=function()error('log unavailable')end})
+assert(observer:sample())
 ''')
 
 
@@ -139,4 +162,33 @@ assert(after.request_armor_id==target and commits==1)
 assert(read(manager+0xa7c+128+4,4)==word(armor)and read(manager+0x96c+136+4,4)==word(armor))
 put(manager+0x96c+136+4,word(helmet))
 assert(not bridge.commit_owned(target,after)and commits==1)
+''')
+
+
+
+def test_unknown_worn_gear_can_transition_to_verified_armor_without_touching_other_slots():
+ run(r'''
+local unknown=0xffffffff
+for _,base in ipairs({manager+0xa7c+128,manager+0x96c+136})do
+ for offset=4,12,4 do put(base+offset,word(unknown))end
+end
+local Bridge=dofile('src/armor_refresh_bridge.lua')
+local current='armor:ffffffff';local target='armor:1f9bfa78';local commits=0
+local grid={commit_capabilities=function()return {commit_verified=true}end,
+ commit_snapshot=function()return {session='armory',local_player_id=0xfffffffd,
+  other_key='protected',pending_nonarmor=false,controller_armor_id=current,profile_armor_id=current}end,
+ verify_commit=function()return true end,
+ commit_owned=function(_,id)
+  assert(id==target);commits=commits+1;current=id
+  put(manager+0xa7c+128+12,word(armor));put(manager+0x96c+136+12,word(armor));return true
+ end}
+local catalog={owned={[target]=true},verify_owned=function(ids)return #ids==1 and ids[1]==target end}
+local bridge=assert(Bridge.new(grid,observer,catalog))
+local before=assert(bridge.snapshot());assert(bridge.commit_owned(target,before))
+local after=assert(bridge.snapshot());assert(after.other_key==before.other_key and commits==1)
+assert(after.request_armor_id==target and after.cache_armor_id==target)
+assert(read(manager+0x96c+136+4,4)==word(unknown)and read(manager+0x96c+136+8,4)==word(unknown))
+assert(not bridge.commit_owned('armor:ffffffff',after)and commits==1,'unknown target must not be authorized')
+put(manager+0x96c+136+8,word(0))
+assert(not bridge.commit_owned(target,after)and commits==1,'changed opaque cape still invalidates the commit')
 ''')

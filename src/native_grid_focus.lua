@@ -28,8 +28,17 @@ end
 local function prepare(model,index,kit_id)
  assert(type(model)=='table'and model.status=='read_only_logical_model','fresh logical model required')
  assert(type(model.verify)=='function'and model.verify()==true,'logical focus model is stale')
- assert(model.group_partition_verified==true and model.selected_offer_matches==true
-  and model.selected_group_matches==true,'logical focus invariants unresolved')
+ assert(model.group_partition_verified==true and model.selected_group_matches==true,'logical focus invariants unresolved')
+ -- Native controller navigation advances row/column before its highlighted
+ -- offer mirror. Only reconcile that observed transition for the exact cursor
+ -- target, and only if the previous highlighted offer is still an owned item.
+ if model.selected_offer_matches~=true then
+  local known=false
+  for _,offer in ipairs(model.offers or {})do
+   if offer.offer_id==model.selected_offer and offer.owned==true then known=true;break end
+  end
+  assert(index==model.selected_index and known,'logical focus offer transition unresolved')
+ end
  assert(integer(model.item_count,1,256)and integer(model.row_count,1,128)
   and integer(model.group_count,1,32),'logical focus bounds rejected')
  assert(type(model.offers)=='table'and #model.offers==model.item_count

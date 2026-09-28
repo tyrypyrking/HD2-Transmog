@@ -18,6 +18,7 @@ VariantSession={new=function()
  return {select=function()return true end,
  view=function()return {native_details=true,can_apply=true,variant_phase='ready'}end,
  is_active=function()return true end,busy=function()return session_busy end,
+ cancel_preview=function()return not session_busy end,
  browse=function()return true end,leave=function()return true end,step=function()end}
 end}
 '''

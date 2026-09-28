@@ -83,6 +83,7 @@ local function native()
   highlight=ffi.typeof('uint8_t (*)(void*, uint32_t)'),
  }
  local select_action=ffi.new('uint64_t',0xA00000000)
+ local action_values={[10]=select_action}
  local kernel=ffi.load('kernel32');local info=ffi.new('uint8_t[48]')
  local xy,packed=ffi.new('float[2]'),ffi.new('uint64_t[1]')
  local armor_word,written=ffi.new('uint32_t[1]'),ffi.new('size_t[1]')
@@ -132,8 +133,10 @@ local function native()
   end,
   deployment_commit=function(at,profile,player,id)ffi.cast(native_types.deployment_commit,at)(ffi.cast('void*',profile),player,id);return true end,
   commit=function(at,owner)ffi.cast(native_types.commit,at)(ffi.cast('void*',owner),0);return true end,
-  consume=function(at,input)
-   ffi.cast(native_types.consume,at)(ffi.cast('void*',input),select_action,-1)
+  consume=function(at,input,action)
+   action=action or 10
+   action_values[action]=action_values[action]or ffi.new('uint64_t',action*4294967296)
+   ffi.cast(native_types.consume,at)(ffi.cast('void*',input),action_values[action],-1)
    return true
   end,
   position=function(at,widget,x,y)
@@ -159,6 +162,7 @@ function M.new(bridge,report,backend)
  local self={phase='resolving'};local base=bridge.base
  local proofs,sections,targets={}, {}, {};local input_global,progression_global,thumbnail_global,commit_info;local deadline=0
  local snapshots=setmetatable({}, {__mode='k'});local movement
+ local creator_actions
  local commit_snapshots=setmetatable({}, {__mode='k'});local commit_session,commit_session_key
  local function read(at,n)
   if not(type(at)=='number'and type(n)=='number'and at%1==0 and n%1==0
@@ -284,6 +288,63 @@ function M.new(bridge,report,backend)
     proofs[#proofs+1]={rva=setter,bytes=body}
     targets.deployment_commit={entry=base+setter,profile_global=global}
    elseif p.spec.name=='detail_input'then
+    local verified,actions=pcall(function()
+     assert(has(rows,'mov rsi, rdx'),'menu input parameter differs')
+     local direction
+     for i,row in ipairs(rows)do if row.op=='mov rcx, rsi'and rows[i+1]then
+      local target=rows[i+1].op:match('^call 0x(%x+)$')
+      if target then assert(not direction,'ambiguous direction reader');direction=tonumber(target,16)end
+     end end
+     assert(direction,'menu direction reader unavailable')
+     -- PE unwind ranges give the exact helper boundary; never decode into an
+     -- adjacent function or guess new game input-enum values.
+     assert(u32(read(base+pe+24+108,4),0)>=4,'menu unwind directory is absent')
+     local entry=read(base+pe+24+112+3*8,8)
+     local table_rva,table_size=u32(entry,0),u32(entry,4)
+     assert(table_size>0 and table_size%12==0 and table_size<=16*1024*1024 and inside(table_rva,table_size,false),
+      'menu unwind directory unavailable')
+     local lo,hi=0,table_size/12-1;local start,finish,bounds
+     for _=1,24 do
+      if lo>hi then break end
+      local mid=math.floor((lo+hi)/2);local raw=read(base+table_rva+mid*12,12)
+      local first,last=u32(raw,0),u32(raw,4)
+      if direction<first then hi=mid-1 elseif direction>=last then lo=mid+1
+      else start,finish,bounds=first,last,{rva=table_rva+mid*12,bytes=raw};break end
+     end
+     assert(start==direction and finish>start and finish-start<=4096 and inside(start,finish-start,true),
+      'menu direction function bounds differ')
+     local raw=read(base+start,finish-start);local ops=decoder.decode(raw,start,2048)
+     local found={};local count=0;local reads_action=false
+     local function collect(list)
+      for _,row in ipairs(list)do
+       local hex=row.op:match('^mov [a-z0-9]+, 0x(%x+)$')
+       -- The game's LuaJIT alpha uses a 32-bit base conversion on Windows.
+       -- Decode the high word separately instead of tonumber(16-digit hex).
+       local high=hex and hex:match('^(%x+)00000000$')
+       local id=high and tonumber(high,16)
+       if id and id>=1 and id<=63 and not found[id]then found[id]=true;count=count+1 end
+       if row.op:find('+0x328]',1,true)or row.op:find('+0x32c]',1,true)then reads_action=true end
+      end
+     end
+     collect(ops)
+     report('grid.creator_direction',string.format('rva=%08x size=%d actions=%d reads=%s',start,finish-start,count,tostring(reads_action)))
+     if count<2 or not reads_action then
+      for i=1,math.min(#ops,160),12 do
+       local lines={};for j=i,math.min(i+11,#ops)do lines[#lines+1]=ops[j].op end
+       report('grid.creator_direction.ops',table.concat(lines,'; '))
+      end
+     end
+     assert(count>=2 and count<=12 and reads_action,'menu direction action reads unverified')
+     collect(rows)
+     -- Select, Back, alternate select and category controls are native menu
+     -- binding IDs. Direction/axis keys above come from their current reader.
+     for _,id in ipairs({10,11,12,18,19})do found[id]=true end
+     local out={};for id in pairs(found)do out[#out+1]=id end;table.sort(out)
+     proofs[#proofs+1]=bounds;proofs[#proofs+1]={rva=start,bytes=raw}
+     return out
+    end)
+    if verified then creator_actions=actions;self.creator_input_error=nil;report('grid.creator_input','ready:'..table.concat(actions,','))
+    else self.creator_input_error=tostring(actions);report('grid.creator_input','unavailable:'..tostring(actions))end
     -- Validate the common UI audio backend. The equipment event itself is
     -- resolved separately from the successful native equipment-selection path.
     for _,op in ipairs({'lea rdi, [rbx+0x49f0]','mov byte [rbx+0x91a3], 0x1',
@@ -1162,6 +1223,21 @@ function M.new(bridge,report,backend)
   if not ok or not result then return nil,ok and 'native input consume rejected'or tostring(result)end
   return true
  end
+ function self:consume_creator()
+  local ok,result=pcall(function()
+   assert(self:input_scope()==true,'creator input scope changed')
+   assert(creator_actions,self.creator_input_error or 'controller menu action proof unavailable')
+   local calls=prepared();assert(calls.executable(targets.consume),'input target not executable')
+   local raw=read(input_global,8);local input=assert(pointer(raw),'input singleton unavailable')
+   assert(code_current(),'creator input proof changed')
+   for _,action in ipairs(creator_actions)do
+    assert(calls.consume(targets.consume,input,action)~=false,'creator input capture rejected')
+   end
+   assert(read(input_global,8)==raw and code_current(),'creator input singleton changed')
+   return true
+  end)
+  if not ok then return nil,tostring(result)end;return result
+ end
  self.consume=self.consume_select
  function self:idle_menu()
   local ok,result=pcall(function()
@@ -1390,6 +1466,12 @@ function M.new(bridge,report,backend)
     return model,ctx
    end
    initial,initial_ctx=observe();bound_owner,bound_grid=initial_ctx.owner,initial_ctx.grid
+   if not(initial.group_partition_verified and initial.selected_offer_matches and initial.selected_group_matches)then
+    report('grid.focus.invariants','index='..tostring(initial.selected_index)..':row='..tostring(initial.selected_row)
+     ..':column='..tostring(initial.selected_column)..':group='..tostring(initial.selected_group)
+     ..':offer='..tostring(initial.selected_offer)..':offer_matches='..tostring(initial.selected_offer_matches)
+     ..':group_matches='..tostring(initial.selected_group_matches)..':partition='..tostring(initial.group_partition_verified))
+   end
    protected={profile=read(initial_ctx.profile_address,initial_ctx.profile_size),scroll=read(bound_grid+0x92960,4),
     scrollbar=read(bound_grid+0x110+0x7b8,4),marker=read(bound_grid+0x9298c,4)}
    local function preserved()
@@ -1656,7 +1738,8 @@ function M.new(bridge,report,backend)
    local expected=read(stats.address,64)
    assert(expected==stats.bytes or(type(options.verify_composition)=='function'
     and options.verify_composition(stats_kit_id,expected)==true),'stat carrier differs from its verified base profile')
-   if expected:sub(49,64)~=stats.bytes:sub(49,64)then
+   local composed_stats=type(options.verify_base_stats)=='function'and options.verify_base_stats(stats_kit_id,stats_id)==true
+   if expected:sub(49,64)~=stats.bytes:sub(49,64)and not composed_stats then
     -- A live composition can change this appearance's weights. Native stat
     -- getters must read a pristine owned equivalent, never the modified donor
     -- and never a temporarily replaced visual/body descriptor.

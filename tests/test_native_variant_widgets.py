@@ -336,3 +336,20 @@ assert(original,why)
 assert(focus_count==1 and displayed_passive==6 and displayed_stat_passive==6)
 assert(read(stats_at,64)==stats_raw and read(owner+0x38,88)==profiles)
 ''')
+
+
+def test_verified_active_stats_use_their_own_carrier_without_an_equivalent_donor():
+    run(r'''
+local g=resolved();put(stats_at+48,b(0xdead0000,8))
+-- Keep the immutable catalog baseline but make the fake native reader expect
+-- the active, verified descriptor while it receives the scoped passive enum.
+stats_raw=read(stats_at,64)
+local result,why=variant(g,nil,nil,{
+ verify_composition=function()return true end,
+ verify_base_stats=function(id,stats)
+  assert(id==stats_id and stats=='native-stats:00005678');return true
+ end})
+assert(result,why)
+assert(#stat_calls==1 and result.stats_kit_id==stats_id)
+assert(read(stats_at,64)==stats_raw and #writes==2)
+''')

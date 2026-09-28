@@ -102,6 +102,9 @@ function M.new(host)
  function self:verify_composition(id)
   return applied_plan~=nil and applied_plan.target_id==id and patch~=nil and patch:is_active()==true
  end
+ function self:verify_base_stats(id,stats_id)
+  return self:verify_composition(id)and applied_plan.request.stats_id==stats_id
+ end
  function self:verify_appearance(id)
   return applied_plan~=nil and applied_plan.source_id==id and self:verify_composition(id)
  end

@@ -64,13 +64,20 @@ function M.new(driver,player,catalog)
   assert(plan.token==proof.token and #plan.weapons==0 and not plan.stratagem_changed
    and #plan.gear<=1 and #(plan.extras.changes or {})==0,'Unexpected loadout operation')
   assert(bridge.verify(state),'Loadout changed during armor preflight')
+  local function check_ownership()
+   assert(A.session(context)==proof.token and catalog.verify_owned({id})==true,'Loadout or ownership changed')
+   if plan.check_ownership then plan.check_ownership()end
+  end
+  check_ownership()
   for _,g in ipairs(plan.gear)do
    assert(g.spec.name=='armor'and g.id==tonumber(target.armor:sub(3),16),'Unexpected gear mutation')
+   check_ownership()
    native.write_gear(plan.info.payload+g.spec.offset,g.before,g.id)
    native.armor(plan.catalog,plan.info.player,g.id)
   end
   if #plan.gear>0 then
    assert(A.session(context)==proof.token,'Loadout changed during armor selection')
+   check_ownership()
    native.commit(plan.info.payload)
    native.refresh(plan.info.card,plan.info.payload,true,plan.info.mode)
   end

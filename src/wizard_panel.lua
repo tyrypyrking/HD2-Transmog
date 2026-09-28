@@ -187,9 +187,17 @@ function M.new(engine)
     self.pages[target]=math.min(self.page_limits[target],math.max(1,self.pages[target]+action.delta))
     return true
   end
+  function self:controller_capacity(view,sample)
+    if view.step==1 and view.controller_native_looks then return 9 end
+    local width,height=G.resolution();local layout=Layout.resolve(width,height,true)
+    local picker=sample and sample.wizard_layout and sample.wizard_layout.picker or layout.picker
+    local row_h=(view.step==3 and 208 or 122)*layout.scale
+    return math.max(1,math.floor((picker.h-44*layout.scale)/row_h))
+  end
   function self:draw(sample,view,context)
     metrics.draw_count=metrics.draw_count+1
     context=context or {}
+    local preview_icons=context.passive_preview_icons~=false
     local width,height=G.resolution()
     if (sample.kind~='armory'and sample.kind~='deployment') or width<640 or height<480 then self:clear();return false end
     local world
@@ -265,6 +273,7 @@ function M.new(engine)
       appearance_id=review_request.appearance_id,stats_id=review_request.stats_id,
       passive_variant_id=review_request.passive_variant_id})
     if self.last_review_key~=review_key then self.pages.review=1;self.last_review_key=review_key end
+    if view.controller_mode and view.controller_page then self.pages.options=view.controller_page end
     local signature_started=os.clock()
     local proof,proof_stamp={},{}
     local function check(spec,thumbnail)
@@ -327,7 +336,7 @@ function M.new(engine)
       local visible={clip=prefix.clip,headers={},cells={},original_badges={}}
       if type(prefix.category)=='table'and prefix.category.text=='CUSTOM VARIANTS'
         and valid_rect(prefix.category.rect,width,height)then visible.category=prefix.category end
-      for _,cell in ipairs(prefix.original_badges or {})do
+      for _,cell in ipairs(preview_icons and prefix.original_badges or {})do
         local r=type(cell)=='table'and prefix_cell_rect(cell,prefix.clip,width,height,scale)
         local passive=type(cell)=='table'and type(cell.passive)=='table'and cell.passive or {}
         if r then visible.original_badges[#visible.original_badges+1]={badge=badge_rect(cell,r,scale),
@@ -347,7 +356,7 @@ function M.new(engine)
         if r then
           local passive=type(cell.passive)=='table'and cell.passive or {}
           visible.cells[#visible.cells+1]={rect=r,visible_rect=visible_rect,
-            badge=cell.kind=='variant'and badge_rect(cell,r,scale)or nil,
+            badge=preview_icons and cell.kind=='variant'and badge_rect(cell,r,scale)or nil,
             partial=partial,kind=cell.kind,label=cell.label,display_name=tile.display_name,selected=cell.selected,
             enabled=tile.enabled,icon=resource(passive.icon_hash)and passive.icon_hash or passive.material}
         end
@@ -362,22 +371,25 @@ function M.new(engine)
         local tile=tiles[index]
         visible.tiles[#visible.tiles+1]={kind=tile.kind,label=tile.label,display_name=tile.display_name,enabled=tile.enabled,action=tile.action,
           preview=tile.kind~='add'and image_signature(tile.preview,true)or nil,
-          icon=tile.kind~='add'and icon_signature(tile.request and tile.request.passive_variant_id,tile.icon_hash)or nil}
+          icon=preview_icons and tile.kind~='add'and icon_signature(tile.request and tile.request.passive_variant_id,tile.icon_hash)or nil}
       end
       rendered.section=visible
     elseif view.open then
       local visible={step=view.step,step_number=view.step_number,step_count=view.step_count,
+        controller_mode=view.controller_mode,controller_native_looks=view.controller_native_looks,controller_notice=view.controller_notice,controller_focus=view.controller_focus,controller_page=view.controller_page,
         stats_follow_look=view.stats_follow_look,title=view.title,header=layout.header,can_back=view.can_back,can_cancel=view.can_cancel,
         empty_options_notice=view.empty_options_notice}
-      if view.step~=1 then
+      if view.step~=1 or view.controller_mode and not view.controller_native_looks then
         local options=view.options or {}
-        local row_h=(view.step==2 and 122 or 208)*scale
+        local row_h=(view.step~=3 and 122 or 208)*scale
         local count=math.max(1,math.floor((layout.picker.h-44*scale)/row_h))
         local pages=math.max(1,math.ceil(#options/count))
         visible.picker=layout.picker;visible.paging=page_signature('options',pages);visible.options={}
         for index=(self.pages.options-1)*count+1,math.min(#options,self.pages.options*count)do
           local item=options[index]
-          if view.step==2 then
+          if view.step==1 then
+            visible.options[#visible.options+1]={action=item.action,label=item.label,preview=image_signature(item.preview,true)}
+          elseif view.step==2 then
             visible.options[#visible.options+1]={action=item.action,selected=item.selected,base=tuple_signature(item.base_values)}
           else
             visible.options[#visible.options+1]={action=item.action,selected=item.selected,label=item.label,
@@ -416,7 +428,7 @@ function M.new(engine)
         summary=native_summary,notice=apply_notice,
         look=native_summary and saved_variant and caption_signature('appearance_id',saved_variant.request.appearance_id)or nil}
     end
-    local signature=stamp({rendered,proof_stamp})
+    local signature=stamp({rendered,proof_stamp,preview_icons})
     metrics.signature_ms=(os.clock()-signature_started)*1000
     metrics.signature_total_ms=metrics.signature_total_ms+metrics.signature_ms
     metrics.signature_bytes=#signature
@@ -441,6 +453,12 @@ function M.new(engine)
     local function capture(r)self.captures[#self.captures+1]=r end
     local function action(r,value,enabled)
       if enabled~=false then self.regions[#self.regions+1]={x=r.x,y=r.y,w=r.w,h=r.h,action=value}end
+      local focus=view.controller_mode and view.controller_focus
+      if enabled~=false and focus and focus.type==value.type and focus.id==value.id and focus.target==value.target then
+        local t=3*scale
+        rect({x=r.x,y=r.y,w=r.w,h=t},gold,988);rect({x=r.x,y=r.y+r.h-t,w=r.w,h=t},gold,988)
+        rect({x=r.x,y=r.y,w=t,h=r.h},gold,988);rect({x=r.x+r.w-t,y=r.y,w=t,h=r.h},gold,988)
+      end
     end
     local function button(r,title,value,enabled)
       rect(r,enabled==false and color(29,34,38) or color(54,58,49),982)
@@ -534,7 +552,7 @@ function M.new(engine)
       text('LOOK',r.x+16*scale,r.y+r.h-86*scale,12,muted)
       text(clip(caption('appearance_id',selected.appearance_id),75),r.x+16*scale,r.y+r.h-112*scale,19,white)
       if creating and view.step==1 then
-        text(view.stats_follow_look and 'Choose owned armor to use its look and base stats.' or 'Choose an owned armor thumbnail to use its look.',r.x+16*scale,r.y+r.h-151*scale,17,gold)
+        text(view.controller_mode and 'D-pad / left stick: choose a look. A: select.' or view.stats_follow_look and 'Choose owned armor to use its look and base stats.' or 'Choose an owned armor thumbnail to use its look.',r.x+16*scale,r.y+r.h-151*scale,17,gold)
       end
       local profile=context.stats_profiles and context.stats_profiles[selected.stats_id]
       local base=type(profile)=='table' and profile.base_only==true and profile.base_values_verified==true
@@ -675,7 +693,7 @@ function M.new(engine)
             local hash=resource(passive.icon_hash) and passive.icon_hash or passive.material
             -- Construct a resource-only descriptor. Never pass foreign handle,
             -- pointer, texture, valid(), or preview metadata to the image path.
-            if visible_badge then
+            if preview_icons and visible_badge then
               rect(visible_badge,color(12,17,22),983)
               icon(nil,hash,badge,true,prefix.clip)
             end
@@ -708,8 +726,10 @@ function M.new(engine)
             if not ready then text('Saved look',r.x+8*scale,r.y+r.h/2,13,muted)end
             text(clip(tile.display_name or tile.label,math.max(8,math.floor(card_width/(7*scale))-2)),r.x+6*scale,r.y+12*scale,14,tile.enabled and white or muted)
             local badge={x=r.x+r.w-31*scale,y=r.y+r.h-31*scale,w=25*scale,h=25*scale}
-            rect(badge,color(12,17,22),983)
-            icon(tile.request and tile.request.passive_variant_id,tile.icon_hash,badge)
+            if preview_icons then
+              rect(badge,color(12,17,22),983)
+              icon(tile.request and tile.request.passive_variant_id,tile.icon_hash,badge)
+            end
           end
         end
       end
@@ -718,13 +738,13 @@ function M.new(engine)
     elseif view.open then
       capture(layout.header);rect(layout.header,color(12,17,22))
       text('CREATE VARIANT  '..tostring(view.step_number or view.step)..' / '..tostring(view.step_count or 3),layout.header.x+8*scale,layout.header.y+34*scale,12,gold)
-      text(view.title or 'Create variant',layout.header.x+8*scale,layout.header.y+10*scale,19,white)
+      text(view.controller_notice or view.title or 'Create variant',layout.header.x+8*scale,layout.header.y+10*scale,19,white)
       button({x=layout.header.x+layout.header.w-172*scale,y=layout.header.y+10*scale,w=76*scale,h=32*scale},'Back',{type='back'},view.can_back)
       button({x=layout.header.x+layout.header.w-88*scale,y=layout.header.y+10*scale,w=80*scale,h=32*scale},'Cancel',{type='cancel'},view.can_cancel)
-      if view.step~=1 then
+      if view.step~=1 or view.controller_mode and not view.controller_native_looks then
         capture(layout.picker);rect(layout.picker,color(12,17,22))
         local options=view.options or {}
-        local row_h=(view.step==2 and 122 or 208)*scale
+        local row_h=(view.step~=3 and 122 or 208)*scale
         local count=math.max(1,math.floor((layout.picker.h-44*scale)/row_h))
         local pages=math.max(1,math.ceil(#options/count))
         self.pages.options=math.min(pages,math.max(1,self.pages.options))
@@ -735,7 +755,11 @@ function M.new(engine)
               w=layout.picker.w-10*scale,h=row_h-12*scale}
             rect(r,item.selected and color(61,60,39) or color(30,36,42));action(r,item.action)
             if item.selected then rect({x=r.x,y=r.y,w=3*scale,h=r.h},gold,983)end
-            if view.step==2 then
+            if view.step==1 then
+              image(item.preview,{x=r.x+10*scale,y=r.y+8*scale,w=80*scale,h=r.h-16*scale},true)
+              local names=wrap(item.label,math.max(12,math.floor((r.w/scale-116)/9)))
+              for i=1,math.min(3,#names)do text(names[i],r.x+104*scale,r.y+r.h-(24+(i-1)*24)*scale,18,gold)end
+            elseif view.step==2 then
               text('BASE STATS',r.x+12*scale,r.y+r.h-23*scale,13,gold)
               for index,field in ipairs(STAT_FIELDS) do
                 local x=r.x+12*scale+(index-1)*(r.w-24*scale)/3
@@ -764,10 +788,14 @@ function M.new(engine)
           end
         end
         pager('options',{x=layout.picker.x+layout.picker.w-147*scale,y=layout.picker.y+5*scale},pages)
-        if view.step==2 then text('Passive bonuses are excluded.',layout.picker.x+12*scale,layout.picker.y+13*scale,13,muted)end
+        if view.controller_mode then
+          text('A Select   B Back   Y Cancel',layout.picker.x+12*scale,layout.picker.y+24*scale,12,gold)
+          text('D-pad / stick Move    LB / RB Page',layout.picker.x+12*scale,layout.picker.y+8*scale,11,muted)
+        end
+        if view.step==2 and not view.controller_mode then text('Passive bonuses are excluded.',layout.picker.x+12*scale,layout.picker.y+13*scale,13,muted)end
       end
       review(view.label,view.selection or {},true)
-      self.policy={native_look_pick=view.step==1,block_native_grid=view.step~=1,
+      self.policy={native_look_pick=view.step==1 and (not view.controller_mode or view.controller_native_looks==true),block_native_grid=view.step~=1 or (view.controller_mode==true and not view.controller_native_looks),
         block_native_apply=true,block_native_compare=true,wizard_open=true,native_picker_rect=layout.picker}
     end
     if selected_variant then

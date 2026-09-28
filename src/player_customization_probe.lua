@@ -13,10 +13,19 @@ local function ptr(s,o)
  local n=lo+hi*4294967296;return n>=65536 and n or nil
 end
 local function kit_id(n)return string.format('armor:%08x',n)end
-function M.new(bridge,data)
+function M.new(bridge,data,options)
  assert(type(bridge)=='table' and type(bridge.read)=='function' and type(bridge.verify)=='function','verified read bridge required')
  assert(type(data)=='table' and type(data.kits)=='table' and type(data.passives)=='table','catalog reference required')
+ options=options or {}
  local self={};local identity,session_key
+ -- Bounded, deduplicated diagnostics: an unfamiliar worn item is evidence,
+ -- not a reason to interrupt browsing or reject an otherwise verified read.
+ local reported,reported_count={},0
+ local function diagnostic(message)
+  if reported[message]or reported_count>=32 then return end
+  reported[message]=true;reported_count=reported_count+1
+  if options.report then pcall(options.report,'player.equipment_unrecognized',message)end
+ end
  local function sample(body_only)
   local ok,result=pcall(function()
    assert(bridge.verify(),'customization compatibility changed')
@@ -60,7 +69,7 @@ function M.new(bridge,data)
     return true
    end
    -- Creator base stats depend on body shape, not the currently cached gear
-   -- or passive. Keep full equipment validation strict for actual Apply.
+   -- or passive. Actual Apply independently verifies target/donor records.
    if body_only then
     local body,wanted=u32(cache,0),u32(request,0)
     assert((body==0 or body==1)and(wanted==0 or wanted==1),'local body type unavailable')
@@ -71,21 +80,25 @@ function M.new(bridge,data)
     local out={body_type=u32(raw,0)}
     assert(out.body_type==0 or out.body_type==1,'local body type unavailable')
     for i,field in ipairs({'helmet','cape','armor'})do
-     local item=u32(raw,i*4);local ref=data.kits[item]
-     -- Existing headless/double-passive saves can hold a known body armor in
-     -- the helmet slot. Observe that ID unchanged; the commit bridge protects
-     -- all non-body slots before/after Apply. Never infer a replacement helmet.
-     local category_ok=ref and (ref.category==({1,2,0})[i]or field=='helmet'and ref.category==0)
-     assert(category_ok,string.format(
-      'local equipment identity/category unavailable: %s.%s id=%08x category=%s expected=%d',
-      source,field,item,tostring(ref and ref.category or 'unknown'),({1,2,0})[i]))
+     local item=u32(raw,i*4)
+     -- Cape and disabled helmet transmog are opaque protected IDs. Even
+     -- checked slots remain observations; only target/donor catalogs authorize
+     -- writes. Preserve every raw ID for transition and non-body guards.
+     if field=='armor'or field=='helmet'and options.helmet_transmog==true then
+      local ref=data.kits[item]
+      local expected=field=='armor'and 0 or 1
+      local category_ok=ref and(ref.category==expected or field=='helmet'and ref.category==0)
+      if not category_ok then diagnostic(string.format(
+       'local equipment identity/category unavailable: %s.%s id=%08x category=%s expected=%d',
+       source,field,item,tostring(ref and ref.category or 'unknown'),expected))end
+     end
      out[field..'_id']=kit_id(item)
     end
     return out
    end
    local requested,current=equipment(request,'request'),equipment(cache,'cache')
    local passive_enum=u32(cache,0x3c);local passive=data.passives[passive_enum]
-   assert(passive,'cached native armor passive unavailable')
+   if not passive then diagnostic(string.format('cached native armor passive unavailable: enum=%08x',passive_enum))end
    local torso=u32(cache,0x40);assert(torso<=3,'cached native torso class unavailable')
    local next_identity={manager,players,player,player_id,index,info,entity}
    local same=identity~=nil
@@ -94,7 +107,7 @@ function M.new(bridge,data)
    assert(verify(),'customization changed during observation')
    return {session_key=session_key,local_player_id=player_id,entity_id=entity,slot=index,
     request=requested,current=current,request_armor_id=requested.armor_id,cache_armor_id=current.armor_id,
-    cache_passive_enum=passive_enum,cache_passive_variant_id=passive.variant_id,
+    cache_passive_enum=passive_enum,cache_passive_variant_id=passive and passive.variant_id or nil,
     torso_class=torso,settled=request==cache:sub(1,16),verify=verify,
     evidence='native_request_and_cache_readback'}
   end)
@@ -109,7 +122,7 @@ function M.format(result)
  if type(result)~='table'then return 'HD2TRANSMOG_PLAYER_CUSTOMIZATION 1\nstatus=unavailable\n'end
  return table.concat({'HD2TRANSMOG_PLAYER_CUSTOMIZATION 1','local_player_id='..result.local_player_id,
   'slot='..result.slot,'request_armor_id='..result.request_armor_id,'cache_armor_id='..result.cache_armor_id,
-  'cache_passive_enum='..result.cache_passive_enum,'cache_passive_variant_id='..result.cache_passive_variant_id,
+  'cache_passive_enum='..result.cache_passive_enum,'cache_passive_variant_id='..tostring(result.cache_passive_variant_id or 'unknown'),
   'torso_class='..result.torso_class,'settled='..tostring(result.settled),'status=observed'},'\n')..'\n'
 end
 return M

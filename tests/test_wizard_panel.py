@@ -1031,3 +1031,44 @@ assert(act('select_passive','perk-a') and draw() and region('create'))
 assert(act(click('back').type) and draw())
 assert(wizard:view(state,context).step==1 and panel:input_policy().native_look_pick)
 ''')
+
+
+def test_preview_icon_switch_defaults_on_and_hides_only_armor_thumbnail_badges():
+    run_lua(FIXTURE+RENDER_FIXTURE+PREFIX_FIXTURE+r'''
+local before=S.encode(state)
+e.Application.can_get=function(kind)return kind=='material'end
+sample.native_prefix.original_badges={{rect={x=590,y=600,w=180,h=190},passive={icon_hash='fedcba9876543210'}}}
+assert(draw()and #bitmaps==2)
+local badge=bitmaps[1];local built=created
+context.passive_preview_icons=false;bitmaps={};rects={}
+assert(draw()and created==built+1 and #bitmaps==0)
+for _,r in ipairs(rects)do
+ assert(not(r.pos[1]==badge.pos[1]and r.pos[2]==badge.pos[2]and r.size[1]==badge.size[1]and r.size[2]==badge.size[2]),
+  'disabled badge left its backing rectangle behind')
+end
+assert(panel:hit(230,700).type=='select_variant'and panel:hit(450,700).type=='open')
+assert(shown('Existing')and shown('+')and S.encode(state)==before)
+built=created;assert(draw()and created==built and #bitmaps==0)
+context.passive_preview_icons=true;assert(draw()and #bitmaps==2)
+''')
+
+
+def test_preview_icons_off_preserves_passive_selection_and_detail_icons():
+    run_lua(FIXTURE+RENDER_FIXTURE+PREFIX_FIXTURE+SAVED_REVIEW_FIXTURE+r'''
+context.passive_preview_icons=false
+assert(review_draw()and #bitmaps==1) -- Detail icon remains; armor badge is absent.
+assert(shown('Padding')and shown('Exact owned clause.'))
+bitmaps={};choose();assert(act('select_passive','perk-b'))
+assert(draw()and #bitmaps==2) -- Passive choice and creator review both retain their icons.
+assert(region('select_passive')and region('create'))
+''')
+
+
+def test_preview_icons_off_also_hides_legacy_saved_card_badges():
+    run_lua(FIXTURE+RENDER_FIXTURE+r'''
+context.passive_variants['perk-a']={icon_hash='0123456789abcdef'}
+sample.custom_section={x=172,y=650,w=644,h=196}
+assert(draw()and #bitmaps==1)
+context.passive_preview_icons=false;bitmaps={}
+assert(draw()and #bitmaps==0 and region('select_variant')and region('open'))
+''')
