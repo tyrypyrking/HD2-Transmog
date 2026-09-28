@@ -19,7 +19,7 @@ def fixture(look="b482b460",stats="1f9bfa78",perk="61b31723"):
     for index,key in enumerate(dict.fromkeys([look,stats,perk])):
         kit=DATA["kits"][str(int(key,16))];at=100000+index*100000;body_at=at+128
         raw=bytes.fromhex(kit["header"])+b"\0"*4+struct.pack("<QQ",body_at,len(kit["bodies"]))
-        record={"address":at,"item_id":kit["item_id"],"category":0,"bodies":[],"reference":kit}
+        record={"address":at,"item_id":kit["item_id"],"category":kit["category"],"bodies":[],"reference":kit}
         puts.append((at,raw));record["bytes_token"]=literal(raw)
         for j,body in enumerate(kit["bodies"]):
             piece_at=at+1024+j*10000

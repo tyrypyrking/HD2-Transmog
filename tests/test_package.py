@@ -13,7 +13,7 @@ from archive import resource_hash
 
 def test_installable_package_and_luajit_discovery_entry():
     subprocess.run([sys.executable,'tools/build.py'],cwd=ROOT,check=True,capture_output=True,text=True)
-    package=ROOT/'dist/HD2-Transmog-Foundation-0.1.2-debug.zip'
+    package=ROOT/'dist/HD2-Transmog-Foundation-0.1.3.zip'
     first=package.read_bytes()
     with zipfile.ZipFile(package) as z:
         assert set(z.namelist()) == {
@@ -21,7 +21,7 @@ def test_installable_package_and_luajit_discovery_entry():
             'Addon/9ba626afa44a3aa3.patch_0.stream','Addon/9ba626afa44a3aa3.patch_0.gpu_resources',
             'LookStats/9ba626afa44a3aa3.patch_0','LookStats/9ba626afa44a3aa3.patch_0.stream',
             'LookStats/9ba626afa44a3aa3.patch_0.gpu_resources'}
-        assert b'0.1.2-debug' in z.read('README.txt')
+        assert b'0.1.3' in z.read('README.txt')
         manifest=json.loads(z.read('manifest.json'))
         assert manifest['IconPath']=='mod-icon.png'
         assert z.read(manifest['IconPath'])==(ROOT/'assets/mod-icon.png').read_bytes()
@@ -65,8 +65,8 @@ def test_installable_package_and_luajit_discovery_entry():
 
 
 def test_release_tag_must_match_runtime_and_checksum_identifies_exact_zip():
-    package=ROOT/'dist/HD2-Transmog-Foundation-0.1.2-debug.zip'
-    subprocess.run([sys.executable,'tools/build.py','--release-tag','v0.1.2-debug'],cwd=ROOT,check=True,capture_output=True,text=True)
+    package=ROOT/'dist/HD2-Transmog-Foundation-0.1.3.zip'
+    subprocess.run([sys.executable,'tools/build.py','--release-tag','v0.1.3'],cwd=ROOT,check=True,capture_output=True,text=True)
     before=package.read_bytes()
     import hashlib
     assert package.with_suffix('.zip.sha256').read_text()==f'{hashlib.sha256(before).hexdigest()}  {package.name}\n'

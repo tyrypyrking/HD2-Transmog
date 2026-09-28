@@ -7,6 +7,7 @@
 -- Successful apply proves memory readback only, never rendered appearance.
 local M = {}
 local layout=ArmorLayout or require('src.armor_layout')
+local helmet_layout=HelmetLayout or require('src.helmet_layout')
 
 local function u32(s, offset)
     if type(s) ~= 'string' or #s < offset+4 then return nil end
@@ -37,11 +38,12 @@ local function span(address, bytes, size)
     assert(type(bytes)=='string' and #bytes==size,'incomplete observation bytes')
     return {address=address,bytes=bytes,size=size}
 end
-local function record_spans(record)
-    assert(type(record)=='table' and record.category==0,'armor record required')
+local function record_spans(record,category)
+    category=category or 0
+    assert(type(record)=='table' and record.category==category,'matching equipment category required')
     local spans={span(record.address,record.bytes,64)}
     local raw=record.bytes
-    assert(integer(record.item_id) and u32(raw,0)==record.item_id and u32(raw,40)==0,'kit identity/category mismatch')
+    assert(integer(record.item_id) and u32(raw,0)==record.item_id and u32(raw,40)==category,'kit identity/category mismatch')
     local bodies=record.bodies
     assert(type(bodies)=='table' and #bodies>=1 and #bodies<=8,'invalid body profile')
     assert(u32(raw,56)==#bodies and u32(raw,60)==0,'body array count mismatch')
@@ -103,7 +105,7 @@ local function composition(source,target,allocate,capabilities)
     -- Keep the look's original body/slot topology intact and use
     -- the donor's weight on every Armor piece. This avoids artificial pieces
     -- and the unproved fourth UI coefficient when the two looks differ.
-    local uniform=layout.uniform(target);local donor_counts={}
+    local uniform=source.category==0 and layout.uniform(target);local donor_counts={}
     for _,body_type in ipairs({0,1})do donor_counts[body_type]=#weights(target,body_type)end
     if uniform~=false and uniform~=nil then
         local spans,descriptors={},{};local sequence_preserved=true
@@ -135,7 +137,7 @@ local function composition(source,target,allocate,capabilities)
             {uniform_weight=uniform,appearance_topology_preserved=true,
              base_weight_sequence_preserved=sequence_preserved,weight_none=false,stat_only_pieces=false}
     end
-    local composed=layout.compose(source,target)
+    local composed=(source.category==1 and helmet_layout or layout).compose(source,target)
     local spans,descriptors={},{}
     for _,body in ipairs(composed.bodies)do
         local raw=table.concat(body.pieces);local allocation,why=allocate(raw);assert(allocation,why)
@@ -288,9 +290,12 @@ function M.new(bridge)
             local source,target=result.records[source_id],result.records[target_id]
             local stats=result.records[stats_id]
             local passive=assert(result.records[passive_id],'passive record unavailable')
-            local source_spans=record_spans(source)
-            local target_spans=record_spans(stats)
-            local passive_spans=record_spans(passive)
+            local category=result.category or 0
+            assert(category==0 or category==1 and result.capabilities.helmet_transmog_enabled==true,
+                'helmet transmog requires observed gameplay differences')
+            local source_spans=record_spans(source,category)
+            local target_spans=record_spans(stats,category)
+            local passive_spans=record_spans(passive,category)
             local labels=appearance_labels(source)
             assert(wanted.stats_id=='native-stats:'..string.format('%08x',stats.item_id),
                 'only an identified native stats donor is supported')

@@ -242,7 +242,7 @@ function M.new(engine,trace)
         local pages = math.max(1, math.ceil(#detail_lines/4))
         local page = math.min(pages, math.max(1, editor.detail_page or 1))
         local signature = tostring(world)..stamp({width,height,x,y,view.open,view.tab or '',view.notice or '',view.saved,
-            sample.font,sample.material,sample.atlas,editor,section or false,native_validity,native_handle_tokens,
+            sample.font,sample.material,sample.atlas,view.title,view.apply_label,editor,section or false,native_validity,native_handle_tokens,
             active_title or false,title_box or false})
         if self.signature == signature then return true end
         self:clear()
@@ -415,9 +415,9 @@ function M.new(engine,trace)
             rect(0,0,3,view.open and 460 or 42,gold)
         end
         if not view.open and not section then
-            button('toggle','ARMOR VARIANTS  /  Transmog',10,6,410)
+            button('toggle',(view.title or 'ARMOR VARIANTS')..'  /  Transmog',10,6,410)
         elseif view.open then
-            text('ARMOR VARIANTS',16,427,24,gold)
+            text(view.title or 'ARMOR VARIANTS',16,427,24,gold)
             button('toggle','Close',344,420,72)
             text(clip(editor.label,39),16,395,18)
             text(editor.dirty and 'UNSAVED DRAFT' or 'SAVED '..tostring(editor.saved_count or 0),16,376,12,muted)
@@ -430,6 +430,7 @@ function M.new(engine,trace)
             local titles = {appearance='OWNED APPEARANCE',stats='BASE STAT DONOR',
                 passive='OWNED EXACT PERK',presets='SAVED VARIANT'}
             text(titles[view.tab] or titles.appearance,16,270,16,gold)
+            if view.title=='HELMET VARIANTS'then button('presets','Saved',316,262,98,true,view.tab=='presets')end
             button('previous_option','<',16,226,32,editor.can_previous == true)
             button('next_option','>',382,226,32,editor.can_next == true)
             text(clip(editor.choice,34),60,237,16)
@@ -463,7 +464,7 @@ function M.new(engine,trace)
             if editor.patch_active then
                 button('reset_variant','Reset',280,60,134,true)
             else
-                button('apply_variant','Apply variant',280,60,134,editor.can_apply == true)
+                button('apply_variant',view.apply_label or 'Apply variant',280,60,134,editor.can_apply == true)
             end
             text(clip(editor.apply_note or 'Apply unavailable - armor remains unchanged.',62),16,42,12,muted)
             text(clip(view.notice or '',55),16,17,13,view.saved and gold or muted)

@@ -129,3 +129,33 @@ assert(#calls==0)
 assert(start(A,{accept_current=true})) -- Current cached passive is 20, desired is 1.
 assert(refresh:step(0)=='wait_alternate'and calls[1]==B)
 ''')
+
+
+
+def test_restoring_old_carrier_can_release_directly_to_an_unchanged_vanilla_target():
+    run_lua(FIXTURE+r"""
+owned[C]=nil
+bridge.owned_armors=function()return {A,B}end
+local restored=0
+assert(refresh:begin({target_id=B,passive_enum=7,donor_ids={A,B},mutation_ids={A},
+ target_unchanged=true,prepare_target=function()
+  assert(live.request_armor_id==B and live.cache_armor_id==B)
+  restored=restored+1;return true
+ end},0))
+assert(refresh:step(0)=='wait_alternate'and calls[1]==B and restored==0)
+assert(refresh:step(1)=='wait_alternate'and restored==0)
+settle(B,7);refresh:step(2);refresh:step(3);refresh:step(4)
+assert(restored==1 and calls[2]==B)
+refresh:step(5);assert(refresh:step(6)=='complete')
+""")
+
+
+def test_unchanged_target_flag_cannot_hide_a_target_mutation_or_missing_plan():
+    run_lua(FIXTURE+r"""
+for _,extra in ipairs({
+ {target_unchanged=true},
+ {target_unchanged=true,prepare_target=function()return true end},
+ {target_unchanged=true,mutation_ids={A},prepare_target=function()return true end},
+})do assert(not start(A,extra))end
+assert(#calls==0)
+""")

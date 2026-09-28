@@ -33,3 +33,18 @@ nav_missing=false;advance()
 assert(browses==1 and host.validate_confirm{id='b'})
 assert(save_count==0 and logged_count('runtime.error=')==0)
 ''',automatic=True,setup=PAD)
+
+
+def test_actual_create_card_controller_a_opens_creator_and_preserves_armor():
+    run('''
+advance();nav_index=1;advance()
+assert(not flow:is_open()and not flow:view().selected_variant)
+local action=host.controller_action()
+assert(action.type=='open'and host.validate_confirm(action))
+input.confirm_down=true;advance()
+assert(not flow:is_open())
+input.confirm_down=false;advance()
+assert(flow:is_open()and flow:view().step==1)
+assert(save_count==0 and files['transmog.state']==saved_before)
+assert(logged_count('runtime.error=')==0)
+''',automatic=True,setup=PAD)

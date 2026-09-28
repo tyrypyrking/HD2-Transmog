@@ -824,6 +824,7 @@ function M.new(bridge,report,backend)
     end
     if out.native_view_mode==0 then
      local key=offers[out.native_offer_id]
+     if key and known[key]and known[key].category==1 and out.native_category==1 then out.helmet_selected_kit_id=ident(key)end
      if key and known[key]and known[key].category==0 then
       out.selected_kit_id=ident(key);out.identity_mapping_verified=true
      end

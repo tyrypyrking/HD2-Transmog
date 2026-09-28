@@ -9,6 +9,7 @@
 -- updates progression only; verify_owned still rechecks each operation. A changed
 -- catalog session requires a new full observation when no retained patch uses it.
 local M={}
+local Helmets=HelmetCatalog or require('src.helmet_catalog')
 local function u32(s,o)
  if not s or #s<o+4 then return nil end
  local a,b,c,d=s:byte(o+1,o+4);return a+b*256+c*65536+d*16777216
@@ -28,7 +29,8 @@ local function plain_effect(text)
   return tag
  end))
 end
-local function field_labels(data,bridge,pause,passives_verified)
+local function field_labels(data,bridge,pause,passives_verified,category)
+ category=category or 0
  local labels={appearance_id={},stats_id={},passive_variant_id={}}
  local details={appearance_id={},stats_id={},passive_variant_id={}}
  local stats_profiles,passive_variants={},{}
@@ -43,13 +45,14 @@ local function field_labels(data,bridge,pause,passives_verified)
   localized[loc]=false
   return fallback
  end
- for key,kit in pairs(data.kits)do if kit.category==0 then
-  local label=name(kit.name_cased,'Armor '..id(key))
+ for key,kit in pairs(data.kits)do if kit.category==category then
+  local label=name(kit.name_cased,(category==1 and 'Helmet 'or 'Armor ')..id(key))
   labels.appearance_id[kit.id]=label
-  details.appearance_id[kit.id]={'Uses an armor you own.','Helmet and cape are separate choices.'}
+  details.appearance_id[kit.id]=category==1 and {'Uses a helmet you own.'}or {'Uses an armor you own.','Helmet and cape are separate choices.'}
   local stat='native-stats:'..id(key)
   labels.stats_id[stat]=label
-  details.stats_id[stat]={"Uses this armor's base weight profile.",'Your selected perk is applied once to that base.'}
+  details.stats_id[stat]=category==1 and {'Copies this helmet’s native weight profile.','Numeric totals and passive stacking require live validation.'}
+   or {"Uses this armor's base weight profile.",'Your selected perk is applied once to that base.'}
   local body_weights={}
   for _,body in ipairs(kit.bodies)do
    local entries={}
@@ -118,6 +121,46 @@ function M.new(bridge,data,report)
   -- Unknown/changed content is isolated, but structural ambiguity, unreadable
   -- memory, invalid bounds/pointers and races still invalidate the provider.
   local records,seen,matched_kits,diagnostics={},{},{},{}
+  local helmet_passives={}
+  local function helmet_passive(enum)
+   if helmet_passives[enum]then return helmet_passives[enum]end
+   assert(enum>=0 and enum<=255,'helmet passive enum bounds rejected')
+   local h=watch(catalog_at+0x20,12);local array,n=pointer(h),u32(h,8)
+   assert(array and n>=1 and n<=256,'helmet passive catalog bounds rejected')
+   local index=u32(watch(catalog_at+0x30+enum*4,4),0)
+   assert(index<n,'helmet passive index rejected')
+   local raw=watch(ptr(array+index*8),56)
+   assert(u32(raw,0)==enum,'helmet passive identity differs')
+   local function float(s,o)
+    local v=u32(s,o);local sign=v>=2147483648 and -1 or 1
+    local e=math.floor(v/8388608)%256;local m=v%8388608
+    assert(e<255,'non-finite helmet passive modifier')
+    return sign*(e==0 and m*2^-149 or (1+m/8388608)*2^(e-127))
+   end
+   local function hex(s)return(s:gsub('.',function(c)return string.format('%02x',c:byte())end))end
+   local p={enum=enum,name_loc=u32(raw,4),icon=hex(raw:sub(9,16):reverse()),behavior_tag=u32(raw,48),
+    modifiers={},stat_modifiers={},raw_modifiers={},raw_stat_modifiers={}}
+   for _,spec in ipairs({{16,16,'modifiers','raw_modifiers'},{32,12,'stat_modifiers','raw_stat_modifiers'}})do
+    local count,high=u32(raw,spec[1]+8),u32(raw,spec[1]+12)
+    assert(high==0 and count<=64,'helmet passive modifier bounds rejected')
+    local at=count>0 and assert(pointer(raw,spec[1]),'helmet passive modifier pointer unavailable')
+    for j=0,count-1 do
+     local value=watch(at+j*spec[2],spec[2]);p[spec[4]][j+1]=hex(value)
+     p[spec[3]][j+1]=spec[1]==16 and {modifier_id=u32(value,0),type=u32(value,4),value=float(value,8),description_loc=u32(value,12)}
+      or {stat=u32(value,0),add_value=float(value,4),mul_value=float(value,8)}
+    end
+   end
+   local fingerprint=table.concat(p.raw_modifiers)..'|'..table.concat(p.raw_stat_modifiers)..'|'..p.behavior_tag
+   local known=data.passives[enum]
+   if known and fingerprint==table.concat(known.raw_modifiers)..'|'..table.concat(known.raw_stat_modifiers)..'|'..known.behavior_tag then
+    p.variant_id=known.variant_id
+   else
+    local a,b=5381,52711
+    for j=1,#fingerprint do a=(a*33+fingerprint:byte(j))%4294967296;b=(b*65599+fingerprint:byte(j))%4294967296 end
+    p.variant_id=string.format('helmet-passive:%d:%08x%08x',enum,a,b)
+   end
+   helmet_passives[enum]=p;return p
+  end
   local matched_count,matched_armors,unknown_count,changed_count=0,0,0,0
   for i=0,n-1 do
    local slot_at=first+i*8
@@ -125,6 +168,7 @@ function M.new(bridge,data,report)
    local at=assert(pointer(slot_bytes),'catalog pointer unavailable');local raw=watch(at,64);local key=u32(raw,0)
    assert(key and key~=0 and not seen[key],'invalid or duplicate kit identity');seen[key]=true
    local expected=data.kits[key]
+   if expected then expected=Helmets.reference(expected,raw)end
    if not expected then
     unknown_count=unknown_count+1;diagnostics[#diagnostics+1]={id='armor:'..id(key),reason='unknown_reference'}
    else
@@ -149,12 +193,17 @@ function M.new(bridge,data,report)
      for k=1,piece_count do
       local piece=body and body.pieces[k]
       local piece_at=pieces_at+(k-1)*96;local piece_raw=piece_array:sub((k-1)*96+1,k*96)
+      if piece then Helmets.piece(piece,piece_raw,expected)end
       if not piece or piece_raw~=bytes(piece.raw)then differs('piece_mismatch')end
       if piece then
        pieces[k]={address=piece_at,bytes=piece_raw,slot=piece.slot,kind=piece.type,weight=piece.weight,path=piece.path}
       end
      end
      bodies[j]={address=body_at,bytes=body_raw,type=body_type,pieces=pieces}
+    end
+    if expected.category==1 then
+     local ok,passive=pcall(helmet_passive,expected.passive_enum)
+     if ok then expected.passive_variant_id=passive.variant_id else differs('unverified_helmet_passive')end
     end
     if mismatch then
      changed_count=changed_count+1;diagnostics[#diagnostics+1]={id=expected.id,reason=mismatch}
@@ -231,7 +280,7 @@ function M.new(bridge,data,report)
    local index,item=u32(entry,0),u32(entry,8)
    assert(index<count,'progression index rejected')
    local kit=matched_kits[item]
-   if kit and kit.category==0 then
+   if kit and (kit.category==0 or kit.category==1) then
    local state=progression+0x1ce4+index*184
    local status=u32(watch(state+0x14,4),0)
    local enabled=watch(state+0xb4,1):byte()==0
@@ -266,6 +315,13 @@ function M.new(bridge,data,report)
    if ownership[key] then owned[kit.id]=true;owned_count=owned_count+1 end
   end end
   local labels,details,stats_profiles,passive_variants=field_labels({kits=matched_kits,passives=data.passives},bridge,pause,passive_ok)
+  local helmet_catalog,helmet_owned={},{}
+  for key,kit in pairs(matched_kits)do if kit.category==1 then
+   helmet_catalog[kit.id]={appearance_id=kit.id,stats_id='native-stats:'..id(key),passive_variant_id=kit.passive_variant_id}
+   if ownership[key]then helmet_owned[kit.id]=true end
+  end end
+  local hl,hd,hs,hp=field_labels({kits=matched_kits,passives=helmet_passives},bridge,pause,true,1)
+  local helmet_caps=Helmets.capabilities(matched_kits,helmet_passives)
   -- Fast freshness checks for a later application transaction. These functions
   -- are called outside our coroutine: never use the yielding reader here.
   -- Preserve only the selected progression evidence, never serialize it.
@@ -292,7 +348,7 @@ function M.new(bridge,data,report)
      local proof=record and ownership_proofs[record.item_id]
      -- Recheck the qualifying offer retained above. If it changes, demand a
      -- new observation even if another offer may now grant the same item.
-     if not proof or record.category~=0 or bridge.read(record.slot_address,8)~=record.slot_bytes
+     if not proof or (record.category~=0 and record.category~=1) or bridge.read(record.slot_address,8)~=record.slot_bytes
       or bridge.read(proof.entry_address,12)~=proof.entry_bytes then return false end
      local status=u32(bridge.read(proof.state_address+0x14,4),0)
      if (status~=2 and status~=4)or bridge.read(proof.state_address+0xb4,1)~='\0' then return false end
@@ -310,6 +366,10 @@ function M.new(bridge,data,report)
     verified_armors=matched_armors,owned_armors=owned_count,progression=count},
    capabilities={kit_records_verified=true,ownership_verified=true,numeric_stats_verified=false,exact_passive_effects_verified=passive_ok},
    verify_session=verify_session,verify_owned=verify_owned}
+  self.result.helmets={category=1,catalog=helmet_catalog,owned=helmet_owned,records=records,passives=live_passives,
+   context={labels=hl,details=hd,stats_profiles=hs,passive_variants=hp},
+   capabilities={kit_records_verified=true,ownership_verified=true,helmet_transmog_enabled=helmet_caps.enabled},
+   detected=helmet_caps,verify_session=verify_session,verify_owned=verify_owned}
   -- Ownership may change while a composed carrier remains live. Refresh only
   -- progression evidence; the kit records above are pristine reset baselines.
   local ownership_worker
@@ -326,7 +386,7 @@ function M.new(bridge,data,report)
    end
    local next_count=u32(observed(progression+0x1ce0,4),0)
    assert(next_count and next_count>=1 and next_count<=4096,'progression count rejected')
-   local next_owned,next_proofs={},{}
+   local next_owned,next_proofs,next_helmets={},{},{}
    local next_total=0
    for i=0,next_count-1 do
     local entry_at=progression+0xb9ce4+i*24
@@ -334,15 +394,17 @@ function M.new(bridge,data,report)
     local index,item=u32(entry,0),u32(entry,8)
     assert(index and index<next_count,'progression index rejected')
     local kit=matched_kits[item]
-    if kit and kit.category==0 then
+    if kit and (kit.category==0 or kit.category==1) then
      local record=records[kit.id]
      assert(observed(record.slot_address,8)==record.slot_bytes,'catalog record slot changed')
      local state=progression+0x1ce4+index*184
      local status=u32(observed(state+0x14,4),0)
      local enabled=observed(state+0xb4,1):byte()==0
      if (status==2 or status==4)and enabled then
-      if not next_owned[kit.id]then next_total=next_total+1 end
-      next_owned[kit.id]=true
+      if kit.category==0 then
+       if not next_owned[kit.id]then next_total=next_total+1 end
+       next_owned[kit.id]=true
+      else next_helmets[kit.id]=true end
       if not next_proofs[item]then
        next_proofs[item]={entry_address=entry_at,entry_bytes=entry,state_address=state}
       end
@@ -354,6 +416,8 @@ function M.new(bridge,data,report)
    end
    assert(ownership_session_valid(),'catalog session changed during ownership refresh')
    local changed=self.result.capabilities.ownership_verified~=true
+   self.result.helmets.owned=next_helmets
+   self.result.helmets.capabilities.ownership_verified=true
    for key in pairs(next_owned)do if not self.result.owned[key]then changed=true end end
    for key in pairs(self.result.owned)do if not next_owned[key]then changed=true end end
    count=next_count;ownership_proofs=next_proofs
@@ -368,6 +432,7 @@ function M.new(bridge,data,report)
    local ok,value=coroutine.resume(ownership_worker)
    if not ok then
     ownership_worker=nil;ownership_proofs={};self.result.owned={}
+    self.result.helmets.owned={};self.result.helmets.capabilities.ownership_verified=false
     self.result.counts.owned_armors=0;self.result.capabilities.ownership_verified=false
     return 'failed',tostring(value)
    end

@@ -29,6 +29,7 @@ def bundle(stats_follow_look=False):
                                ('CatalogData','catalog_data.lua'),
                                ('CatalogLabels','catalog_labels.lua'),
                                ('Localization','localization.lua'),
+                               ('HelmetCatalog','helmet_catalog.lua'),
                                ('CatalogProbe','catalog_probe.lua'),
                                ('DebugBridge','debug_bridge.lua'),
                                ('NativeDisassembler','../vendor/LuaJIT-disassembler/dis_x86.lua'),
@@ -49,6 +50,8 @@ def bundle(stats_follow_look=False):
                                ('ArmorRefresh','armor_refresh.lua'),
                                ('ArmorRefreshBridge','armor_refresh_bridge.lua'),
                                ('VariantSession','variant_session.lua'),
+                               ('DiverKitCompat','diverkit_compat.lua'),
+                               ('DiverKitBridge','diverkit_bridge.lua'),
                                ('VariantLayout','variant_layout.lua'),
                                ('VariantWizard','variant_wizard.lua'),
                                ('VariantCards','variant_cards.lua'),
@@ -60,9 +63,10 @@ def bundle(stats_follow_look=False):
                                ('IconProbe','icon_probe.lua'),
                                ('UiWorkflow','ui_workflow.lua'),
                                ('ArmorLayout','armor_layout.lua'),
+                               ('HelmetLayout','helmet_layout.lua'),
                                ('AppearancePatch','armor_composition.lua'),
                                ('RuntimeWriter','runtime_writer.lua'),
-                               ('Adapter','runtime_adapter.lua'), ('Panel','panel.lua')]:
+                               ('Adapter','runtime_adapter.lua'), ('Panel','panel.lua'), ('HelmetEditor','helmet_editor.lua')]:
         chunks.append('local '+variable+' = (function()\n'+(ROOT/'src'/filename).read_text()+'\nend)()\n')
     chunks.append((ROOT/'src/main.lua').read_text())
     source=''.join(chunks)
@@ -73,7 +77,7 @@ def bundle(stats_follow_look=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--release-tag', help='Require a release tag matching the runtime version (for example v0.1.2).')
+    parser.add_argument('--release-tag', help='Require a release tag matching the runtime version (for example v0.1.3).')
     args = parser.parse_args()
     if args.release_tag is not None and args.release_tag not in (VERSION, 'v'+VERSION):
         parser.error(f'release tag must be {VERSION} or v{VERSION}; got {args.release_tag!r}')
@@ -133,12 +137,16 @@ def main():
         'This uses two stages (look and passive); the look supplies base stats. Existing variants are unchanged.\n'
         'Base-stat choices exclude donor passive bonuses and are sorted by armor rating.\n'
         'Create saves locally and does not equip or change the worn armor.\n'
+        'Optional DiverKit Alpha 8.8.1 compatibility is detected automatically; DiverKit is not required.\n'
+        'Equip each custom variant in Transmog, then save/overwrite its DiverKit preset to capture its exact stats and passive.\n'
+        'Old DiverKit presets must be saved again. Excluding Armor leaves it unchanged; unknown interfaces disable compatibility.\n'
         'Select a saved card to preview its look in the original stat/perk panels.\n'
         'Click Apply or press and release controller A (XInput/Steam Input) on a ready selected armor.\n'
-        '0.1.2-debug: diagnostic build with 1.5-second double-click equip and support for existing body armor in the helmet slot.\n'
-        'Discards stale grid observations before list reconstruction; logs native construction, retirement reasons and build duration.\n'
-        'Local user QA passed restoration, multiple variant creations and equipping; other players\' crashes remain unconfirmed.\n'
-        'Further headless/double-passive compatibility work is deferred pending a separate helmet-passive mod.\n'
+        '0.1.3: controller A opens the focused + Create card on release.\n'
+        'Deleting a worn variant selects an ordinary owned armor; Apply safely restores the old carrier and equips it.\n'
+        'Includes the optional stat-selection mode, optional DiverKit adapter, and closer facemask icon.\n'
+        'Helmet-passive compatibility is detected from actual gameplay data; normal helmets remain unchanged.\n'
+        'The optional helmet editor is an initial path; live combat stacking and numeric helmet previews remain unverified.\n'
         'Install as an update to Transmog; do not enable a second copy. Existing variants are retained.\n'
         'After reproducing an issue, send HD2Transmog.log, HD2Transmog.previous.log, BingusSharedLoader.log and Transmog/STATUS.txt.\n'
         'Logs are under %LOCALAPPDATA%/CowboyBingus/Helldivers2/Logs. No debug.enabled marker is needed.\n'

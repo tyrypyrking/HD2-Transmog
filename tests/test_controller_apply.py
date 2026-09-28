@@ -90,3 +90,40 @@ assert(pad(false));assert(pad(true))
 assert(flow:before{x=0,y=0,down=false})
 assert(pad(false)and applied==0)
 ''')
+
+
+def test_a_opens_focused_create_card_once_without_equipping():
+    run(r'''
+flow:clear_selected_variant();selected_custom=false
+local focus=true;local revision=1
+host.controller_action=function()if focus then return {type='open',revision=revision}end end
+host.validate_confirm=function(action)return focus and action.type=='open'and action.revision==revision end
+host.should_capture=function()return focus end
+assert(pad(false));assert(pad(true)and consumed)
+for i=1,5 do assert(pad(true)and not flow:is_open())end
+assert(pad(false)and flow:is_open())
+assert(applied==0 and persisted==0 and native_equips==0)
+assert(pad(false)and flow:view().step==1)
+''')
+
+
+def test_create_confirmation_rejects_focus_rebuild_capacity_and_ownership_changes():
+    for change in [
+        'focus=false',
+        'revision=2',
+        'state.ownership_verified=false',
+        'context.variant_capacity=0',
+        'flow:clear()',
+        "host.validate_confirm=function()error('native focus unavailable')end",
+    ]:
+        run(r'''
+flow:clear_selected_variant();selected_custom=false
+local focus=true;local revision=1
+host.controller_action=function()if focus then return {type='open',revision=revision}end end
+host.validate_confirm=function(action)return focus and action.revision==revision end
+host.should_capture=function()return true end
+assert(pad(false));assert(pad(true))
+'''+change+r'''
+assert(pad(false)and not flow:is_open())
+assert(applied==0 and persisted==0 and native_equips==0)
+''')

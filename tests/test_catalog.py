@@ -44,8 +44,8 @@ def lua_bytes(value):
     return '"'+''.join(f'\\{byte:03d}' for byte in value)+'"'
 
 
-def fixture_script(mutation="", status=2, disabled=0, post_ready="", live_passives=False):
-    selected=[kit for kit in DATA["kits"].values() if kit["category"]==0][:2]
+def fixture_script(mutation="", status=2, disabled=0, post_ready="", live_passives=False, selected=None):
+    selected=selected or [kit for kit in DATA["kits"].values() if kit["category"]==0][:2]
     reference={"source_commit":"fixture","kits":{k["item_id"]:k for k in selected},
                "passives":{int(k):v for k,v in DATA["passives"].items()}}
     segments=[]

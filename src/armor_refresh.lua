@@ -99,8 +99,12 @@ function M.new(bridge,report)
    assert(time_value(timeout)and timeout>=250 and timeout<=20000,'refresh timeout outside bounds')
    assert(request.prepare_target==nil or type(request.prepare_target)=='function','invalid target preparation hook')
    local _,mutations=copy_ids(request.mutation_ids)
-   if request.prepare_target then mutations[request.target_id]=true
-   else assert(next(mutations)==nil,'carrier mutations require a preparation hook')end
+   if request.target_unchanged==true then
+    assert(request.prepare_target and next(mutations)and not mutations[request.target_id],
+     'unchanged target requires other explicit mutation carriers')
+   end
+   if request.prepare_target and request.target_unchanged~=true then mutations[request.target_id]=true
+   elseif not request.prepare_target then assert(next(mutations)==nil,'carrier mutations require a preparation hook')end
    assert(request.accept_current~=true or request.prepare_target==nil,
     'unchanged equipment cannot include target preparation')
    local current=snapshot()
@@ -112,7 +116,7 @@ function M.new(bridge,report)
    local alternate
    local already_current=request.accept_current==true and same_selection(current,request.target_id)
     and current.cache_armor_id==request.target_id and current.cache_passive==request.passive_enum
-   local release=current.request_armor_id==request.target_id and not already_current
+   local release=current.request_armor_id==request.target_id and not already_current and request.target_unchanged~=true
    if request.prepare_target then
     assert(same_selection(current,current.request_armor_id),'finish pending native armor changes first')
     for _,key in ipairs({'controller_armor_id','profile_armor_id','request_armor_id','cache_armor_id'})do
@@ -120,7 +124,7 @@ function M.new(bridge,report)
     end
    end
    if release then
-    alternate=request.alternate_id
+    alternate=request.alternate_id or(request.target_unchanged==true and request.target_id or nil)
     if not alternate then
      assert(type(bridge.owned_armors)=='function','owned alternate armor list unavailable')
      local owned=bridge.owned_armors();assert(type(owned)=='table'and #owned<=2048,'owned alternate bounds rejected')
@@ -128,7 +132,8 @@ function M.new(bridge,report)
      table.sort(sorted)
      for _,id in ipairs(sorted)do if id~=request.target_id and not mutations[id]then alternate=id;break end end
     end
-    assert(kit_id(alternate)and alternate~=request.target_id,'a different owned armor is required to refresh this carrier')
+    assert(kit_id(alternate)and(alternate~=request.target_id or request.target_unchanged==true),
+     'a different owned armor is required to refresh this carrier')
     assert(not mutations[alternate],'alternate armor is a carrier that needs rewriting')
     assert(bridge.verify_owned({alternate})==true,'alternate armor is not currently owned')
     if not seen[alternate]then donors[#donors+1]=alternate end

@@ -37,6 +37,18 @@ function M.new(state_api,wizard_api,panel,host)
  local confirm_previous,confirm_source,confirm_armed
  local function clear_confirm()confirm_previous=nil;confirm_source=nil;confirm_armed=nil end
  local function confirm_action(view)
+  if not view.open and view.apply_pending~=true and type(host.controller_action)=='function'then
+   local ok,action=pcall(host.controller_action)
+   if ok and type(action)=='table'and action.type=='open' then
+    for _,tile in ipairs(view.section and view.section.tiles or {})do
+     if tile.kind=='add'and tile.enabled==true then
+      if not host.validate_confirm then return action end
+      local checked,valid=pcall(host.validate_confirm,action)
+      if checked and valid==true then return action end
+     end
+    end
+   end
+  end
   if view.open or view.native_details~=true or view.can_apply~=true or view.apply_pending==true then return nil end
   local action
   if view.native_override==true and view.native_override_id then

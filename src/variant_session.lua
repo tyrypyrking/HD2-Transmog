@@ -23,6 +23,7 @@ function M.new(host)
  assert(type(samples)=='number'and samples%1==0 and samples>=1 and samples<=10,'invalid preview observation count')
  local next_preview_at=0
  local background=false
+ local external_bridge,external=false,false
  local function report(key,value)if host.report then host.report(key,value)end end
  local function reset()
   if not patch then return true end
@@ -143,11 +144,12 @@ function M.new(host)
   end
   local catalog=host.catalog();local passive=catalog.context.passive_variants[selected.request.passive_variant_id]
   if not(passive and type(passive.enum)=='number')then return reject('The selected passive is unavailable.')end
-  local coordinator,reason=host.new_refresh(background);if not coordinator then return reject(reason or 'Native armor Apply is unavailable.')end
+  local coordinator,reason=host.new_refresh(background,external_bridge);if not coordinator then return reject(reason or 'Native armor Apply is unavailable.')end
   local plan=selected.plan
   local previous=applied_plan and copy(applied_plan.request)
   local needs_preparation=not selected.native_override or patch~=nil
-  local mutations=needs_preparation and {plan.target_id}or {}
+  local target_unchanged=selected.native_override==true and applied_plan~=nil and applied_plan.target_id~=plan.target_id
+  local mutations=needs_preparation and not target_unchanged and {plan.target_id}or {}
   if applied_plan and applied_plan.target_id~=plan.target_id then mutations[#mutations+1]=applied_plan.target_id end
   local prepare_target
   if needs_preparation then prepare_target=function()
@@ -161,14 +163,50 @@ function M.new(host)
    end end
   local began,why=coordinator:begin({target_id=plan.target_id,passive_enum=passive.enum,
    donor_ids={plan.source_id,plan.stats_source_id,plan.passive_source_id},timeout_ms=5000,mutation_ids=mutations,
-   prepare_target=prepare_target,accept_current=not needs_preparation},now)
+   prepare_target=prepare_target,target_unchanged=target_unchanged,accept_current=not needs_preparation},now)
   if not began then return reject(why or 'Native armor Apply could not begin.')end
   if host.before_apply then
-   local ok,error=host.before_apply(background);if not ok then return reject(error)end
+   local ok,error=host.before_apply(background,external);if not ok then return reject(error)end
   end
   refresh=coordinator;refresh_previous=previous;self.phase='applying';notice=nil
   report('variant.apply_kind',selected.native_override and 'original'or 'saved')
   report('variant.apply',selected.label or plan.target_id);return true
+ end
+ -- The compatibility adapter owns polling and context verification. It passes
+ -- a loadout bridge; the existing release/compose/re-equip protocol is reused.
+ function self:external_begin(label,request,now,bridge,original)
+  if refresh or background then return nil,'Wait for the current armor change to finish.'end
+  if type(now)~='number'or now~=now or now<0 then return nil,'Invalid equipment clock'end
+  local plan,why=metadata(request);if not plan then return nil,why end
+  pending=nil;preview=nil;detail_binding=nil;next_preview_at=0
+  selected={label=label,request=plan.request,plan=plan,native_override=original==true}
+  external_bridge=bridge;external=true;background=true;left=false;self.phase='ready'
+  self.external_status='applying';self.external_error=nil
+  local called,ok,error=pcall(self.apply,self,now)
+  if not called then error=ok;ok=nil end
+  if not ok then
+   external_bridge=nil;external=false;background=false;selected=nil;self.phase='idle'
+   self.external_status='failed';self.external_error=error
+  end
+  return ok,error
+ end
+ function self:external_cancel(reason)
+  if not external then return end
+  self:abandon_restore(reason)
+  external_bridge=nil;external=false;self.external_status='failed';self.external_error=tostring(reason)
+ end
+ function self:export_equipped(id)
+  if refresh or background then return nil,'Armor application is pending'end
+  if not host.player then return nil,'Player evidence unavailable'end
+  local actor,why=host.player();if not actor then return nil,why end
+  if actor.request_armor_id~=id or actor.cache_armor_id~=id then return nil,'Armor is transitioning'end
+  if not patch then return false end
+  if not applied_plan then return nil,'Armor composition needs recovery'end
+  if applied_plan.target_id~=id then return false end
+  if not committed or not same(committed.request,applied_plan.request)or not currently_equipped(committed)then
+   return nil,'Equipped variant has not been verified'
+  end
+  return {label=committed.label,request=copy(committed.request),target_id=committed.target_id}
  end
  function self:restore(label,request,now)
   if refresh or patch or selected or pending or preview then return nil,'startup restoration requires an idle session'end
@@ -190,6 +228,7 @@ function M.new(host)
      if not called or not ok then report('variant.persistence_failed',called and why or ok)end
     end
     if background then
+     if external then self.external_status='complete';external_bridge=nil;external=false end
      background=false;selected=nil;self.phase='idle';self.restore_status='complete'
      report('variant.restored',evidence.status);return
     end
@@ -225,6 +264,7 @@ function M.new(host)
     notice=evidence and evidence.reason or 'Armor refresh could not be verified.'
     self.phase='apply_failed';report('variant.apply_failed',notice)
     if background then
+     if external then self.external_status='failed';self.external_error=notice;external_bridge=nil;external=false end
      background=false;refresh=nil;refresh_previous=nil;selected=nil;self.phase='idle';self.restore_status='failed'
      report('variant.restore_failed',notice);return
     end

@@ -11,7 +11,7 @@ body:
   attributes:
     label: Transmog and Bingus versions
     description: Include the exact Transmog version, especially any -debug suffix.
-    placeholder: Transmog 0.1.2-debug; Bingus v16
+    placeholder: Transmog 0.1.3; Bingus v16
   validations:
     required: true
 - type: input
