@@ -23,7 +23,7 @@ local function action_key(action)
 end
 function M.new(state_api,wizard_api,panel,host)
  assert(type(host)=='table'and type(host.current)=='function'and type(host.persist)=='function','UI host required')
- local wizard=wizard_api.new(state_api,{allow_create=host.allow_create~=false})
+ local wizard=wizard_api.new(state_api,{allow_create=host.allow_create~=false,stats_follow_look=host.stats_follow_look==true})
  local self={};local previous,armed,release_latch,last_view=nil,nil,false,nil
  local last_click,double_apply
  local function clear_double()last_click=nil;double_apply=nil end

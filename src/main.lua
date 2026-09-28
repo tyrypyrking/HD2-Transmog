@@ -1,5 +1,6 @@
 -- Bundled after State, Platform, Adapter and Panel by tools/build.py.
 local MODULE = 'mods/hd2transmog/foundation'
+local STATS_FOLLOW_LOOK = false -- Arsenal build option; default keeps independent stats.
 local UiLayout=UiLayout or require('src.ui_layout')
 local EquippedState=EquippedState or require('src.equipped_state')
 if rawget(_G, 'HD2Transmog') then return rawget(_G, 'HD2Transmog') end
@@ -12,6 +13,7 @@ local function report(key, value)
 end
 local ok, failure = pcall(function()
     log=(Diagnostics or require('src.diagnostics')).open(loader)
+    report('creator.stats_follow_look',STATS_FOLLOW_LOOK)
     report('startup.begin',true);report('version',runtime.version);report('build',runtime.build)
     report('loader.present',type(loader)=='table')
     report('loader.version',type(loader)=='table'and loader.version or 'unknown')
@@ -261,6 +263,9 @@ local ok, failure = pcall(function()
     function presentation.restore()
         if not grid_ui.presentation then return true end
         if grid_ui.bridge and grid_ui.bridge.custom_headers then grid_ui.bridge:custom_headers(0,false)end
+        grid_ui.snapshot=nil;grid_ui.next_sample=0
+        if catalog_result then catalog_result.context.appearance_previews={}end
+        if creation then creation:clear()end
         local result=grid_ui.presentation:restore()
         report('presentation.restore',result.phase..':'..tostring(result.error or ''))
         if result.phase=='restored' or result.phase=='retired' then
@@ -287,7 +292,15 @@ local ok, failure = pcall(function()
         presentation.revision=presentation.revision+1
         local native=grid_ui.bridge:presentation_bridge(catalog_result,tostring(token)..':'..presentation.revision)
         local coordinator=NativeGridPresentation.new(native,{allow_create=allow_create})
+        local started=fs.now()
+        report('presentation.build.begin',tostring(grid_ui.screen_kind)..':revision='..presentation.revision..':native='..model.item_count..':custom='..#cards..':create='..tostring(allow_create))
+        -- Clear releases native thumbnail leases and reconstructs the widgets.
+        -- Neither a successful rebuild nor rollback preserves the old sample.
+        grid_ui.snapshot=nil;grid_ui.next_sample=0
+        catalog_result.context.appearance_previews={}
+        if creation then creation:clear()end
         local result=coordinator:attempt(cards)
+        report('presentation.build.returned','revision='..presentation.revision..':elapsed_ms='..(fs.now()-started)..':phase='..tostring(result.phase))
         report('presentation.attempt',result.phase..':'..tostring(result.error or ''))
         if result.phase~='active'then return nil,result.error or result.phase,result end
         grid_ui.navigation_group=nil;grid_ui.navigation_pending=nil;grid_ui.navigation_cleared=nil
@@ -297,6 +310,7 @@ local ok, failure = pcall(function()
             if not(label and domain.presets[label])then label=cards[1].kind=='variant'and cards[1].label or nil end
             grid_ui.last_created_label=nil
             if label then
+            report('presentation.auto_preview',label)
             local shown,why=creation:action{type='select_variant',label=label}
             if not shown then report('creator.preview_unavailable',why)end
             end
@@ -390,6 +404,7 @@ local ok, failure = pcall(function()
         assert(VariantWizard and WizardPanel and UiWorkflow,'Creator modules are unavailable')
         creation=UiWorkflow.new(State,VariantWizard,WizardPanel.new(engine),{
             native_picker=true,
+            stats_follow_look=STATS_FOLLOW_LOOK,
             now=fs.now,
             report=report,
             allow_create=grid_ui.screen_kind~='deployment',
@@ -1051,7 +1066,14 @@ local ok, failure = pcall(function()
                 local lifecycle=grid_ui.presentation and observed and grid_ui.presentation.status and grid_ui.presentation:status()
                 if grid_ui.presentation and observed and(observed.kind~=4 or observed.native_view_mode~=0
                     or observed.item_count~=grid_ui.custom_expected_count or lifecycle and lifecycle.phase=='retired')then
-                    report('presentation.retired','Native menu rebuilt its armor list')
+                    local retirement=observed.kind~=4 and 'category changed'
+                        or observed.native_view_mode~=0 and 'view mode changed'
+                        or observed.item_count~=grid_ui.custom_expected_count and 'item count changed'
+                        or lifecycle and lifecycle.error or 'native model changed'
+                    report('presentation.retired',retirement..':screen='..tostring(grid_ui.screen_kind)
+                        ..':kind='..tostring(observed.kind)..':mode='..tostring(observed.native_view_mode)
+                        ..':items='..tostring(observed.item_count)..':expected='..tostring(grid_ui.custom_expected_count)
+                        ..':revision='..presentation.revision)
                     grid_ui.presentation=nil;grid_ui.custom_cards=nil;grid_ui.navigation_group=nil;grid_ui.navigation_pending=nil;grid_ui.navigation_cleared=nil;grid_ui.custom_expected_count=nil
                     grid_ui.selected_label=nil;grid_ui.native_browse_index=nil
                     if creation then creation:leave()end
@@ -1070,6 +1092,9 @@ local ok, failure = pcall(function()
                 context.appearance_previews=observed and observed.appearance_previews or {}
                 for _,preview in pairs(context.appearance_previews)do preview.native_handle_verified=grid_ui.thumbnail_verified end
                 if not observed and runtime.grid_wait~=reason then runtime.grid_wait=reason;report('grid.wait',reason)end
+                if observed and runtime.grid_wait then
+                    report('grid.recovered',runtime.grid_wait);runtime.grid_wait=nil
+                end
             end
             -- The previous native-resize experiment is intentionally removed.
             -- New custom rows must use the verified list model, never a repeated

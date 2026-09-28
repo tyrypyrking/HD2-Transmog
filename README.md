@@ -2,9 +2,13 @@
 
 Version **0.1.2-debug** — combine an owned armor appearance, an owned base-stat profile, and an owned passive in Helldivers 2. Requires **Bingus Shared Loader v15+ / API 1**.
 
-This diagnostic patch adds double-click equipping for ordinary/custom armor in Armory and pre-mission Equipment, with a 1.5-second click window. It also accepts a known body-armor ID already occupying the helmet slot, preserving that existing slot while changing body armor. This fixes the reproduced validation failure in automated tests; an affected double-passive player still needs to confirm it live. Player-reported custom-card crashes remain under investigation.
+This diagnostic patch adds double-click equipping for ordinary/custom armor in Armory and pre-mission Equipment, with a 1.5-second click window. It also accepts a known body-armor ID already occupying the helmet slot, preserving that existing slot while changing body armor. This fixes the reproduced validation failure in automated tests; player logs show successful equips on the debug build but do not establish full double-passive compatibility. Further glitch-specific work is deferred pending a separate helmet-passive mod. Player-reported custom-card crashes remain under investigation.
 
-Install this as an update to the existing mod, not alongside another Transmog copy. Saved variants are retained. Diagnostic logging is automatic; no debug marker is required. The offline suite passes 958 tests, with 9 optional checks skipped. The extended click window and logging were exercised live without crashes or hangs.
+Install this as an update to the existing mod, not alongside another Transmog copy. Saved variants are retained. Diagnostic logging is automatic; no debug marker is required. The offline suite passes 964 tests, with 9 optional checks skipped. The extended click window and earlier logging were exercised live without crashes or hangs.
+
+The latest source also discards grid snapshots and thumbnail observations before rebuilding or restoring the native list, whose Clear operation releases the old thumbnail resources. A regression reproduces the previous stale-snapshot drawing path. Construction tests cover one through eight saved cards with repeated appearances and both Create-card policies. Additional checkpoints bracket native list construction and initial selection. User QA on 2026-09-28 with build `1ffbe3e94298295e` passed startup restoration, seven new variant creations and a final equip without reported crashes or issues. Logs confirm eight successful presentation builds, no presentation retirements, and shutdown. One zero-length grid observation was rejected during initial entry and recovered before construction. This session does not establish a fix for other players' reported crashes.
+
+Presentation diagnostics identify the first changed model component (geometry, counts, grouping, offers or flags), distinguish category and view changes, and record build duration and automatic preview selection. Observation failures include rejected read bounds and a recovery event when sampling resumes. These events add no per-frame log writes; flushed construction checkpoints can add menu-opening or rebuild cost.
 
 ## Use
 
@@ -29,7 +33,7 @@ Reduced Armor-menu work by reusing unchanged display choices and decoded offer d
 
 Final user QA on 2026-09-28 passed with only Bingus Shared Loader and the normal 0.1.2 build installed: creation, mouse/controller equipping, equipped-state feedback and sound, menu navigation, ultrawide layout, pre-mission use, restart restoration, and variant removal. The remaining Armor-menu overhead was accepted. That release passed 934 offline tests, with 9 optional checks skipped. The specific double-passive glitch remains untested in an affected live environment.
 
-Creator base-stat choices now read the verified body type independently of the worn passive cache. Unknown cached passive data no longer blocks that read; full equipment validation still applies when equipping. Missing stat evidence shows a diagnostic message and transient read failures are retried. This addresses a failure path consistent with the reported double-passive issue; live reproduction of that glitch is still pending.
+Creator base-stat choices now read the verified body type independently of the worn passive cache. Unknown cached passive data no longer blocks that read; full equipment validation still applies when equipping. Missing stat evidence shows a diagnostic message and transient read failures are retried. This addresses a failure path consistent with the reported double-passive issue; further glitch-specific validation is deferred.
 
 ## Independent combinations
 
@@ -58,6 +62,8 @@ python3 tools/build.py
 
 Import `dist/HD2-Transmog-Foundation-0.1.2-debug.zip` through Arsenal as the existing mod, enable it with the loader, and deploy while the game is closed. Let Arsenal assign patch numbers. Restart the game after installing an update.
 
+Arsenal **Options → HD2 Transmog Foundation → Disable armor stat selection** is an optional two-stage creator: choose a look, then a passive. The look supplies its own base stats; the selected passive is applied independently. **Independent armor stats (default)** keeps the existing three-stage creator. Select one mode, deploy with the game closed, and restart. Existing saved variants keep their original stats in either mode.
+
 The mod identity and saved-state format are unchanged in 0.1.2. Existing saved variants are retained. State is stored under `%LOCALAPPDATA%/CowboyBingus/Helldivers2/Transmog`; diagnostics are in `STATUS.txt` and the sibling `Logs/HD2Transmog.log`. Corrupt or unreadable state is preserved rather than discarded.
 
 ## Reporting problems
@@ -65,6 +71,8 @@ The mod identity and saved-state format are unchanged in 0.1.2. Existing saved v
 Use the [issue forms](https://github.com/tyrypyrking/HD2-Transmog/issues/new/choose) for crashes, equipment problems, or other bugs. They list the useful details and log files; missing logs do not prevent a report.
 
 ## Compatibility and limits
+
+Headless/double-passive glitch compatibility is low priority and awaits further mod changes. The planned direction is a separate helmet-passive mod, so players can obtain a second passive without relying on the glitch. That mod is not included in Transmog, and no release date is committed. Existing compatibility handling remains, but full support for glitched loadouts is not guaranteed.
 
 Ownership is rechecked before saving or applying. The current catalog supports up to 120 saved variants. Unknown records become unavailable without deleting saved definitions.
 

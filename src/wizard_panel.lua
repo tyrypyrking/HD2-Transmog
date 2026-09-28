@@ -366,7 +366,8 @@ function M.new(engine)
       end
       rendered.section=visible
     elseif view.open then
-      local visible={step=view.step,title=view.title,header=layout.header,can_back=view.can_back,can_cancel=view.can_cancel,
+      local visible={step=view.step,step_number=view.step_number,step_count=view.step_count,
+        stats_follow_look=view.stats_follow_look,title=view.title,header=layout.header,can_back=view.can_back,can_cancel=view.can_cancel,
         empty_options_notice=view.empty_options_notice}
       if view.step~=1 then
         local options=view.options or {}
@@ -533,7 +534,7 @@ function M.new(engine)
       text('LOOK',r.x+16*scale,r.y+r.h-86*scale,12,muted)
       text(clip(caption('appearance_id',selected.appearance_id),75),r.x+16*scale,r.y+r.h-112*scale,19,white)
       if creating and view.step==1 then
-        text('Choose an owned armor thumbnail to use its look.',r.x+16*scale,r.y+r.h-151*scale,17,gold)
+        text(view.stats_follow_look and 'Choose owned armor to use its look and base stats.' or 'Choose an owned armor thumbnail to use its look.',r.x+16*scale,r.y+r.h-151*scale,17,gold)
       end
       local profile=context.stats_profiles and context.stats_profiles[selected.stats_id]
       local base=type(profile)=='table' and profile.base_only==true and profile.base_values_verified==true
@@ -716,7 +717,7 @@ function M.new(engine)
       self.policy={native_look_pick=false,block_native_apply=false,block_native_compare=false}
     elseif view.open then
       capture(layout.header);rect(layout.header,color(12,17,22))
-      text('CREATE VARIANT  '..tostring(view.step)..' / 3',layout.header.x+8*scale,layout.header.y+34*scale,12,gold)
+      text('CREATE VARIANT  '..tostring(view.step_number or view.step)..' / '..tostring(view.step_count or 3),layout.header.x+8*scale,layout.header.y+34*scale,12,gold)
       text(view.title or 'Create variant',layout.header.x+8*scale,layout.header.y+10*scale,19,white)
       button({x=layout.header.x+layout.header.w-172*scale,y=layout.header.y+10*scale,w=76*scale,h=32*scale},'Back',{type='back'},view.can_back)
       button({x=layout.header.x+layout.header.w-88*scale,y=layout.header.y+10*scale,w=80*scale,h=32*scale},'Cancel',{type='cancel'},view.can_cancel)

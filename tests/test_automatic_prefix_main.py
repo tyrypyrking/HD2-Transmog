@@ -142,3 +142,41 @@ VariantSession={new=function()
  is_active=function()return false end,leave=function()return true end,step=function()end}
 end}
 ''')
+
+
+def test_list_rebuild_never_draws_using_the_pre_clear_snapshot():
+    run(r'''
+assert(presentation_builds==1 and presentation_active)
+assert(logged_count('runtime.error=')==0)
+advance()
+assert(fresh_draws>0,'fresh presentation was never drawn')
+assert(logged_count('runtime.error=')==0)
+''', automatic=True, setup=r'''
+local sampled_generation=-1
+local snapshot=grid.snapshot
+function grid:snapshot(...)
+ local value,why=snapshot(self,...)
+ if value then sampled_generation=presentation_builds end
+ return value,why
+end
+local fresh_draws=0
+function grid:custom_headers()
+ assert(sampled_generation==presentation_builds,'pre-Clear snapshot reached post-rebuild drawing')
+ fresh_draws=fresh_draws+1
+ return true
+end
+''')
+
+
+def test_observation_recovery_is_logged_once_and_rearms_the_same_failure_reason():
+    run(r'''
+grid_mode='unreadable';advance();advance()
+assert(logged_count('grid.wait=fixture grid observation changed')==1)
+grid_mode='ready';advance();advance()
+assert(logged_count('grid.recovered=fixture grid observation changed')==1)
+grid_mode='unreadable';advance()
+assert(logged_count('grid.wait=fixture grid observation changed')==2)
+grid_mode='ready';advance();advance()
+assert(logged_count('grid.recovered=fixture grid observation changed')==2)
+assert(logged_count('runtime.error=')==0)
+''', automatic=True)

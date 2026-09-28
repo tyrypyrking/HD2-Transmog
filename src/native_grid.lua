@@ -161,7 +161,10 @@ function M.new(bridge,report,backend)
  local snapshots=setmetatable({}, {__mode='k'});local movement
  local commit_snapshots=setmetatable({}, {__mode='k'});local commit_session,commit_session_key
  local function read(at,n)
-  assert(type(at)=='number'and at%1==0 and at>=65536 and at+n<140737488355328 and n>=1 and n<=262144,'grid read bounds rejected')
+  if not(type(at)=='number'and type(n)=='number'and at%1==0 and n%1==0
+   and at>=65536 and at+n<140737488355328 and n>=1 and n<=262144)then
+   error(string.format('grid read bounds rejected: address=%s length=%s',tostring(at),tostring(n)))
+  end
   local raw=bridge.read(at,n);assert(type(raw)=='string'and #raw==n,'grid evidence unreadable');return raw
  end
  local function inside(rva,n,exec)
@@ -1004,13 +1007,15 @@ function M.new(bridge,report,backend)
    assert(targets[name]and calls.executable(targets[name]),'native presentation constructor unavailable: '..name)
   end
   local bound,sequence,active=nil,0,nil
+  local fingerprint_names={'geometry','row_count','group_count','item_count','row_items','group_rows','group_items','group_keys','offers','flags_a','flags_b'}
   local function fingerprint(g)
    local n=u32(read(g+0x92984,4),0);local rows=u32(read(g+0x91f14,4),0);local groups=u32(read(g+0x92748,4),0)
    assert(n<=256 and rows<=256 and groups<=33,'native presentation bounds changed')
-   return table.concat({read(g+4,16),read(g+0x91f14,4),read(g+0x92748,4),read(g+0x92984,4),
+   local parts={read(g+4,16),read(g+0x91f14,4),read(g+0x92748,4),read(g+0x92984,4),
     read(g+0x92318,math.min(rows+1,256)*4),groups>0 and read(g+0x9274c,groups*4)or '',
     groups>0 and read(g+0x927d0,groups*4)or '',groups>0 and read(g+0x92854,groups*4)or '',
-    n>0 and read(g+0x92990,n*4)or '',n>0 and read(g+0x92dc2,n)or '',n>0 and read(g+0x92ec2,n)or ''},'|')
+    n>0 and read(g+0x92990,n*4)or '',n>0 and read(g+0x92dc2,n)or '',n>0 and read(g+0x92ec2,n)or ''}
+   return table.concat(parts,'|'),parts
   end
   local function same(t)
    if not(t and t==bound and code_current())then return false end
@@ -1018,8 +1023,16 @@ function M.new(bridge,report,backend)
    return ok and c.owner==t.owner and c.grid==t.grid and u32(read(c.grid+0x92fc4,4),0)==4
     and read(c.grid+0x92fd1,1)=='\0'and u32(read(c.grid-0x6d0+0x178c88,4),0)==0
   end
-  local function owns(t)return same(t)and fingerprint(t.grid)==t.fingerprint end
-  local function changed(t)t.fingerprint=fingerprint(t.grid)end
+  local function owns(t)
+   if not same(t)then return false,'native menu or code proof changed'end
+   local value,parts=fingerprint(t.grid)
+   if value==t.fingerprint then return true end
+   for i,name in ipairs(fingerprint_names)do
+    if parts[i]~=t.fingerprint_parts[i]then return false,'native model generation changed: '..name end
+   end
+   return false,'native model generation changed'
+  end
+  local function changed(t)t.fingerprint,t.fingerprint_parts=fingerprint(t.grid)end
   local function get_snapshot()
    local m,why=self:inspect_model(catalog_result);assert(m,why)
    local c=context();local g=c.grid
@@ -1055,14 +1068,15 @@ function M.new(bridge,report,backend)
    -- A first-row selection can be restored with normal Highlight and zero scroll.
    local selected=false;for i=1,s.rows[1].count do if s.entries[i].offer_id==s.selected_offer_id then selected=true end end
    assert(selected,'first native row selection required for reversible presentation')
-   s._owner=c.owner;s._grid=c.grid;s._fingerprint=fingerprint(c.grid);return s
+   s._owner=c.owner;s._grid=c.grid;s._screen=c.screen_kind;s._fingerprint,s._fingerprint_parts=fingerprint(c.grid);return s
   end
   bridge_out.verify=function(s)return s.verify()==true and fingerprint(s._grid)==s._fingerprint end
   bridge_out.verify_owned=function(ids)return catalog_result.verify_owned(ids)==true end
   bridge_out.begin=function(s)
    assert(bridge_out.verify(s),'presentation baseline changed');sequence=sequence+1
-   bound={owner=s._owner,grid=s._grid,fingerprint=s._fingerprint,sequence=sequence,
-    marker=s.marker_offer_id,original_selected=s.selected_offer_id,updating=true}
+   bound={owner=s._owner,grid=s._grid,fingerprint=s._fingerprint,fingerprint_parts=s._fingerprint_parts,sequence=sequence,
+    marker=s.marker_offer_id,original_selected=s.selected_offer_id,updating=true,screen=s._screen}
+   report('grid.presentation.begin',tostring(s._screen)..':items='..s.item_count..':selected='..s.selected_offer_id..':marker='..s.marker_offer_id)
    active=bound;return bound
   end
   bridge_out.same_menu=same;bridge_out.owns=owns
@@ -1072,25 +1086,36 @@ function M.new(bridge,report,backend)
   end
   bridge_out.clear=function(t)
    assert(active==t and t.updating and owns(t),'presentation clear lease changed')
-   calls.list_clear(targets.list_clear,t.grid);changed(t);t.finished=false
+   report('grid.list_clear.begin',t.screen)
+   calls.list_clear(targets.list_clear,t.grid)
+   report('grid.list_clear.returned',t.screen);changed(t);t.finished=false
    return u32(read(t.grid+0x92984,4),0)==0 and u32(read(t.grid+0x92748,4),0)==0
   end
   bridge_out.append=function(t,entry)
    assert(active==t and t.updating and not t.finished and owns(t),'presentation append lease changed')
    local n=u32(read(t.grid+0x92984,4),0);assert(n<256,'presentation item cap')
-   calls.list_append(targets.list_append,t.grid,entry.offer_id,entry.group_key,entry.flag_a,entry.flag_b);changed(t)
+   local checkpoint=t.screen..':index='..n..':offer='..entry.offer_id..':kit='..entry.kit_id..':group='..entry.group_key
+   report('grid.list_append.begin',checkpoint)
+   calls.list_append(targets.list_append,t.grid,entry.offer_id,entry.group_key,entry.flag_a,entry.flag_b)
+   report('grid.list_append.returned',checkpoint);changed(t)
    return u32(read(t.grid+0x92984,4),0)==n+1 and u32(read(t.grid+0x92990+n*4,4),0)==entry.offer_id
   end
   bridge_out.finish=function(t)
    assert(active==t and t.updating and not t.finished and owns(t),'presentation finish lease changed')
    -- Normal population writes the equipped-marker offer before Finish.
    assert(calls.write_armor(t.grid+0x9298c,t.marker),'presentation marker restore rejected')
-   t.finished=true;calls.list_finish(targets.list_finish,t.grid);changed(t);return true
+   t.finished=true;report('grid.list_finish.begin',t.screen)
+   calls.list_finish(targets.list_finish,t.grid)
+   report('grid.list_finish.returned',t.screen);changed(t);return true
   end
   bridge_out.restore_view=function(t,view,custom)
    assert(active==t and t.updating and owns(t)and view.scroll_value==0,'presentation view restore lease changed')
    local offer=custom and u32(read(t.grid+0x92990,4),0)or view.selected_offer_id
-   assert(offer~=0 and calls.highlight(targets.highlight,t.grid,offer),'presentation highlight failed')
+   assert(offer~=0,'presentation highlight offer unavailable')
+   report('grid.presentation_highlight.begin',t.screen..':offer='..offer)
+   local highlighted=calls.highlight(targets.highlight,t.grid,offer)
+   report('grid.presentation_highlight.returned',t.screen..':offer='..offer)
+   assert(highlighted,'presentation highlight failed')
    t.view_offer=offer;changed(t);return true
   end
   bridge_out.view_matches=function(t,view,custom)
@@ -1319,7 +1344,10 @@ function M.new(bridge,report,backend)
    for i=0,total-1 do local offer=u32(list,i*4);if qualifying[offer]then chosen=offer;break end end
    assert(chosen,'no enabled owned offer for this armor is present in the native list')
    assert(ctx.unchanged()and code_current()and catalog_result.verify_owned({id})==true,'selection evidence or ownership changed')
-   assert(calls.highlight(targets.highlight,g,chosen)==true,'native highlight rejected the offer')
+   report('grid.select_highlight.begin',ctx.screen_kind..':kit='..id..':offer='..chosen)
+   local highlighted=calls.highlight(targets.highlight,g,chosen)
+   report('grid.select_highlight.returned',ctx.screen_kind..':kit='..id..':offer='..chosen)
+   assert(highlighted==true,'native highlight rejected the offer')
    assert(code_current()and u32(read(g+0x92988,4),0)==chosen,'native highlighted offer readback differs')
    return {status='native_highlight_readback_verified',kit_id=id,offer_id=chosen,equipped=false,rendering_verified=false}
   end)

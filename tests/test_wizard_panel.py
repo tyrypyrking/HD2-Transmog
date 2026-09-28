@@ -1015,3 +1015,19 @@ before=created;context.stats_status='unavailable';texts={};assert(draw()and crea
 joined={};for _,t in ipairs(texts)do joined[#joined+1]=t.value end
 assert(table.concat(joined,' '):find('Base stats could not be verified',1,true))
 ''')
+
+
+def test_two_stage_panel_shows_passive_controls_and_correct_progress():
+    run_lua(FIXTURE+RENDER_FIXTURE+r'''
+wizard=W.new(S,{stats_follow_look=true})
+assert(act('open') and draw())
+assert(shown('CREATE VARIANT  1 / 2'))
+assert(shown('Choose owned armor to use its look and base stats.'))
+assert(act('select_look','look-b') and draw())
+assert(shown('CREATE VARIANT  2 / 2') and shown('Choose a passive'))
+assert(region('select_passive') and not region('select_stats'))
+assert(panel:input_policy().block_native_grid)
+assert(act('select_passive','perk-a') and draw() and region('create'))
+assert(act(click('back').type) and draw())
+assert(wizard:view(state,context).step==1 and panel:input_policy().native_look_pick)
+''')

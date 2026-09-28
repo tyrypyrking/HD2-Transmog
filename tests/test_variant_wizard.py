@@ -343,3 +343,76 @@ assert(after.options[1].id=='base:51/550/125')
 assert(before.options[1].id=='base:50/550/125')
 assert(act('select_stats','base:51/550/125'))
 ''')
+
+
+def test_stats_follow_look_two_stage_save_back_cancel_and_retry():
+    run_lua(FIXTURE+r'''
+wizard=W.new(S,{stats_follow_look=true})
+local before=S.encode(state)
+assert(act('open'));assert(wizard:view(state,context).step_count==2)
+assert(act('select_look','look-b'))
+local view=wizard:view(state,context)
+assert(view.step==3 and view.step_number==2 and view.title=='Choose a passive')
+assert(view.selection.stats_id=='stats-b' and not view.can_create)
+assert(not act('select_stats','base:150/450/50'))
+assert(act('select_passive','perk-a') and act('back'))
+assert(wizard:view(state,context).step==1)
+assert(act('select_look','look-d'))
+view=wizard:view(state,context)
+assert(view.selection.stats_id=='stats-d' and view.selection.passive_variant_id=='perk-a')
+assert(view.can_create and not view.stats_notice)
+assert(act('rename',nil,'Two stages'))
+local ok,why,tx=act('create');assert(ok,why)
+assert(wizard:validate_transaction(tx,state,context))
+assert(tx.candidate.presets['Two stages'].stats_id=='stats-d')
+assert(S.encode(state)==before)
+assert(wizard:failed(tx,'Disk full'))
+assert(wizard:view(state,context).can_create)
+local _,_,retry=act('create');assert(wizard:validate_transaction(retry,state,context))
+assert(wizard:saved(retry,retry.candidate));state=retry.candidate
+assert(state.presets.Existing.stats_id=='stats-a' and state.selected.stats_id=='stats-a')
+assert(act('open') and act('select_look','look-b') and act('cancel'))
+assert(not wizard:view(state,context).open)
+-- Existing mixed-stat variants stay selectable in either configuration.
+state.presets.Mixed={appearance_id='look-b',stats_id='stats-a',passive_variant_id='perk-a'}
+local selected,_,intent=act('select_variant',nil,'Mixed')
+assert(selected and intent.request.stats_id=='stats-a')
+''')
+
+
+def test_stats_follow_look_uses_exact_owned_donor_without_tuple_dedup_or_bonus():
+    run_lua(FIXTURE+r'''
+wizard=W.new(S,{stats_follow_look=true})
+-- stats-b and stats-c have equal tuples; choosing look-c must retain stats-c.
+assert(act('open') and act('select_look','look-c'))
+assert(wizard:view(state,context).selection.stats_id=='stats-c')
+assert(act('back') and act('select_look','look-a'))
+assert(wizard:view(state,context).selection.stats_id=='stats-a') -- Stable first owned kit, not stats-e.
+assert(act('back'))
+context.stats_profiles={} -- No manual tuple verification is needed to inherit a native donor.
+assert(act('select_look','look-b') and act('select_passive','perk-a'))
+local ok,why,tx=act('create');assert(ok,why)
+assert(tx.candidate.presets[tx.label].stats_id=='stats-b')
+assert(tx.candidate.presets[tx.label].passive_variant_id=='perk-a')
+assert(wizard:validate_transaction(tx,state,context))
+''')
+
+
+def test_stats_follow_look_rechecks_catalog_relationship_and_ownership_on_save():
+    run_lua(FIXTURE+r'''
+wizard=W.new(S,{stats_follow_look=true})
+assert(act('open') and not act('select_look','look-locked'))
+assert(act('select_look','look-b') and act('select_passive','perk-a'))
+local _,_,tx=act('create')
+-- The old stats are still owned, but are no longer this look's native stats.
+state.catalog.b.stats_id='stats-d'
+assert(not wizard:validate_transaction(tx,state,context))
+state.catalog.b.stats_id='stats-b'
+assert(wizard:validate_transaction(tx,state,context))
+S.reconcile_owned(state,catalog,{'a','c','d','e'})
+assert(not wizard:validate_transaction(tx,state,context))
+assert(wizard:failed(tx,'Ownership changed'))
+assert(not wizard:view(state,context).can_create and not act('create'))
+assert(act('cancel') and act('open'))
+assert(not act('select_look','look-b'))
+''')

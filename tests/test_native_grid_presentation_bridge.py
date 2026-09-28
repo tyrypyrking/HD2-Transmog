@@ -184,3 +184,78 @@ put(grid+0x92960,f(1));assert(not pcall(api.snapshot));put(grid+0x92960,f(0))
 put(grid+0x928e8,b(1,4));assert(not pcall(api.snapshot))
 assert(invoked.clear==0 and invoked.append==0)
 ''')
+
+
+def test_five_saved_cards_and_neighboring_row_boundaries_roundtrip_with_repeated_offers():
+    # Exercise the actual bridge against the captured constructor memory contract.
+    # Both policies use this grid contract; this does not simulate native rendering.
+    run(r'''
+local g=resolved();local P=dofile('src/native_grid_presentation.lua')
+for count=1,8 do for _,create in ipairs({false,true})do for _,same_look in ipairs({false,true})do
+ local api=g:presentation_bridge(catalog,'count-'..count..':'..tostring(create)..':'..tostring(same_look))
+ local original=api.snapshot();local cards={}
+ for i=1,count do cards[#cards+1]={key='saved:'..i,kind='variant',
+  kit_id=(same_look or i%2==1)and 'armor:00001234'or 'armor:00005678'}end
+ if create then cards[#cards+1]={key='create',kind='create',kit_id='armor:00001234'}end
+ local coordinator=P.new(api,{allow_create=create})
+ local result=coordinator:attempt(cards);assert(result.phase=='active',result.error)
+ local custom=count+(create and 1 or 0)
+ assert(n32(grid+0x92984)==10+custom and n32(grid+0x91f14)==4+math.ceil(custom/3))
+ assert(n32(grid+0x9298c)==702,'equipped marker changed')
+ for i=0,9 do assert(n32(grid+0x92990+(custom+i)*4)==701+i,'native offer order changed')end
+ assert(coordinator:status().phase=='active')
+ local restored=coordinator:restore();assert(restored.phase=='restored',restored.error)
+ assert(P.matches(api.snapshot(),original),'repeated construction accumulated state')
+end end end
+''')
+
+
+def test_presentation_checkpoints_bracket_calls_and_identify_failed_append():
+    run(r'''
+local log={}
+local g=G.new(bridge,function(key,value)log[#log+1]={key=key,value=value}end,backend)
+assert(ready(g)=='ready');log={}
+local api=g:presentation_bridge(catalog,'logging');local s=api.snapshot();local t=api.begin(s)
+assert(api.capture(true,t)and api.clear(t))
+assert(log[#log-1].key=='grid.list_clear.begin'and log[#log].key=='grid.list_clear.returned')
+local append=backend.list_append
+backend.list_append=function(...)
+ assert(log[#log].key=='grid.list_append.begin')
+ assert(log[#log].value:find('armory:index=0:offer=701:kit=armor:00001234',1,true))
+ error('simulated native call failure')
+end
+assert(not pcall(api.append,t,s.entries[1]))
+assert(log[#log].key=='grid.list_append.begin','failed call falsely logged as returned')
+backend.list_append=append
+for _,entry in ipairs(s.entries)do assert(api.append(t,entry))end
+assert(api.finish(t))
+assert(log[#log-1].key=='grid.list_finish.begin'and log[#log].key=='grid.list_finish.returned')
+assert(api.restore_view(t,{selected_offer_id=701,scroll_value=0},false))
+assert(log[#log-1].key=='grid.presentation_highlight.begin'and log[#log].key=='grid.presentation_highlight.returned')
+assert(api.end_update(t))
+local n=#log
+assert(api.owns(t)and api.same_menu(t))
+assert(#log==n,'read-only presentation checks emit repeated logging')
+''')
+
+
+def test_retirement_identifies_changed_model_component_without_native_writes():
+    run(r'''
+local cases={
+ {'geometry',4,f(101)}, {'row_count',0x91f14,b(5,4)},
+ {'group_count',0x92748,b(3,4)}, {'item_count',0x92984,b(11,4)},
+ {'row_items',0x92318,b(2,4)}, {'group_rows',0x9274c,b(1,4)},
+ {'group_items',0x927d0,b(1,4)}, {'group_keys',0x92854,b(42,4)},
+ {'offers',0x92990,b(710,4)}, {'flags_a',0x92dc2,string.char(9)},
+ {'flags_b',0x92ec2,string.char(9)}}
+local g=resolved()
+for _,case in ipairs(cases)do
+ local api=g:presentation_bridge(catalog,'reason-'..case[1])
+ local snapshot=api.snapshot();local t=api.begin(snapshot);assert(api.end_update(t))
+ local at=grid+case[2];local before=read(at,#case[3]);put(at,case[3])
+ local owned,why=api.owns(t)
+ assert(owned==false and why=='native model generation changed: '..case[1],tostring(why))
+ assert(invoked.clear==0 and invoked.append==0 and invoked.finish==0)
+ put(at,before);assert(api.owns(t))
+end
+''')

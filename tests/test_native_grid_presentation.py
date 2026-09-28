@@ -359,3 +359,14 @@ assert(equipment:attempt(saved).phase=='active')
 assert(equipment:restore().phase=='restored')
 assert(current.item_count==source.item_count and current.group_count==source.group_count)
 """)
+
+
+def test_status_preserves_specific_retirement_reason():
+    run(r'''
+assert(controller:attempt(cards).phase=='active')
+local before=counts.clear
+bridge.owns=function()return false,'native model generation changed: flags_b'end
+local result=controller:status()
+assert(result.phase=='retired'and result.error=='native model generation changed: flags_b')
+assert(counts.clear==before,'retirement reconstructed a replaced native list')
+''')

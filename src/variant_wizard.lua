@@ -16,7 +16,9 @@
 -- context.labels[field][id], appearance_previews[id], passive_variants[id]
 -- are optional display metadata. Preview descriptors are passed through to the
 -- renderer without invoking them and are NEVER copied into persisted state.
--- Stats require stats_profiles[stats_id] = {
+-- policy.stats_follow_look=true skips the stats picker and inherits the owned
+-- appearance donor's stats_id. Saved variants retain their original definitions.
+-- Manual stats choices require stats_profiles[stats_id] = {
 --   base_only=true, base_values_verified=true,
 --   base_values={armor_rating=number, speed=number, stamina_regen=number}
 -- }. Boosted donor totals and unverifiable profiles are excluded. The caller
@@ -105,8 +107,10 @@ end
 
 local function options(domain, context)
   local parts, looks, stats, passives = owned_parts(domain), {}, {}, {}
-  local stat_map, stat_by_donor, unresolved = {}, {}, 0
+  local stat_map, stat_by_donor, look_stats, unresolved = {}, {}, {}, 0
   for _, id in ipairs(keys(parts.appearance_id)) do
+    -- Stable owned donor selection when multiple kits share an appearance.
+    look_stats[id] = domain.catalog[parts.appearance_id[id][1]].stats_id
     looks[#looks+1] = {id=id, label=label(context, 'appearance_id', id),
       donor_kit_ids=parts.appearance_id[id], preview=context.appearance_previews
         and context.appearance_previews[id], action={type='select_look', id=id}}
@@ -147,7 +151,7 @@ local function options(domain, context)
   end
   table.sort(passives, sort_named)
   return {parts=parts, looks=looks, stats=stats, passives=passives,
-    stat_map=stat_map, stat_by_donor=stat_by_donor, unresolved=unresolved}
+    stat_map=stat_map, stat_by_donor=stat_by_donor, look_stats=look_stats, unresolved=unresolved}
 end
 
 local function clone_domain(S, domain)
@@ -158,10 +162,17 @@ local function clone_domain(S, domain)
   return candidate
 end
 
+local function request_valid(self, model, request, tuple_id)
+  if not owned_request(model.parts, request) then return false end
+  if self._stats_follow_look then
+    return model.look_stats[request.appearance_id] == request.stats_id
+  end
+  return tuple_id ~= nil and model.stat_by_donor[request.stats_id] == tuple_id
+end
+
 local function draft_valid(self, model)
   local draft = self._draft
-  return owned_request(model.parts, draft) and draft.stats_tuple_id ~= nil
-    and model.stat_by_donor[draft.stats_id] == draft.stats_tuple_id
+  return draft and request_valid(self, model, draft, draft.stats_tuple_id) or false
 end
 
 -- Display names are derived, while saved labels remain stable action identities.
@@ -199,7 +210,8 @@ function M.new(state_api, policy)
   assert(type(state_api) == 'table' and type(state_api.encode) == 'function'
     and type(state_api.validate) == 'function' and type(state_api.new) == 'function',
     'VariantWizard requires the pure State module')
-  return setmetatable({_state=state_api, _step=0, _allow_create=not policy or policy.allow_create~=false}, Wizard)
+  return setmetatable({_state=state_api, _step=0, _allow_create=not policy or policy.allow_create~=false,
+    _stats_follow_look=policy and policy.stats_follow_look==true}, Wizard)
 end
 
 function Wizard:is_open()
@@ -255,6 +267,9 @@ function Wizard:view(domain, context)
   return {
     section={title='Custom Variant', before='Light Armor', tiles=tiles},
     open=self._step > 0, step=self._step,
+    -- Keep semantic step IDs stable for renderers/input; number only visible stages.
+    step_number=self._stats_follow_look and self._step==3 and 2 or self._step,
+    step_count=self._stats_follow_look and 2 or 3, stats_follow_look=self._stats_follow_look==true,
     title=({'Choose a look', 'Choose base stats', 'Choose a passive'})[self._step],
     options=displayed_options, selection=triple(selected), stats_tuple_id=selected.stats_tuple_id,
     label=self._label, can_back=self._step > 1 and not self._pending,
@@ -267,7 +282,7 @@ function Wizard:view(domain, context)
       (context.stats_status=='unavailable'and 'Base stats could not be verified. Reopen Armor; if this persists, include STATUS.txt and HD2Transmog.log in your report.'
        or context.stats_status=='player_unavailable'and 'Player body type is unavailable. Return to the ship and reopen Armor.'
        or 'Verifying owned base stats. If this persists, reopen Armor and check the diagnostics.')or nil,
-    stats_notice=model.unresolved > 0 and 'Some owned base stats are awaiting verification.' or nil,
+    stats_notice=not self._stats_follow_look and model.unresolved > 0 and 'Some owned base stats are awaiting verification.' or nil,
     label_error=self._step > 0 and not valid_label and label_error or nil,
     notice=self._notice,
   }
@@ -288,7 +303,7 @@ function Wizard:action(domain, context, action)
   end
   if kind == 'back' then
     if self._step <= 1 then return nil, 'There is no previous step.' end
-    self._step = self._step - 1
+    self._step = self._stats_follow_look and 1 or self._step - 1
     return true
   end
   local model = options(domain, context)
@@ -312,9 +327,13 @@ function Wizard:action(domain, context, action)
     return true
   elseif kind == 'select_look' and self._step == 1 then
     if not model.parts.appearance_id[action.id] then return nil, 'This look needs verified ownership.' end
-    self._draft.appearance_id, self._step = action.id, 2
+    self._draft.appearance_id, self._step = action.id, self._stats_follow_look and 3 or 2
+    if self._stats_follow_look then
+      self._draft.stats_id = model.look_stats[action.id]
+      self._draft.stats_tuple_id = nil
+    end
     return true
-  elseif kind == 'select_stats' and self._step == 2 then
+  elseif kind == 'select_stats' and self._step == 2 and not self._stats_follow_look then
     local choice = model.stat_map[action.id]
     if not choice then return nil, 'This owned base-stat tuple has not been verified.' end
     self._draft.stats_id, self._draft.stats_tuple_id = choice.stats_id, choice.id
@@ -332,7 +351,8 @@ function Wizard:action(domain, context, action)
     return true
   elseif kind == 'create' then
     if self._step ~= 3 or not draft_valid(self, model) then
-      return nil, 'Choose an owned look, verified base stats, and an exact owned passive.'
+      return nil, self._stats_follow_look and 'Choose an owned look and an exact owned passive.'
+        or 'Choose an owned look, verified base stats, and an exact owned passive.'
     end
     if #keys(domain.presets) >= capacity(context) then return nil, 'The saved variant limit is reached.' end
     local ok, err = label_valid(self, domain, self._label)
@@ -361,8 +381,7 @@ function Wizard:validate_transaction(tx, domain, context)
   if self._state.encode(domain) ~= pending.before then return nil, 'Variant state changed; create a new save transaction.' end
   if #keys(tx.candidate.presets)>capacity(context) then return nil, 'The saved variant limit is reached.' end
   local model = options(domain, context or {})
-  if not owned_request(model.parts, pending.request)
-    or model.stat_by_donor[pending.request.stats_id] ~= pending.tuple_id then
+  if not request_valid(self, model, pending.request, pending.tuple_id) then
     return nil, 'Ownership or base-stat verification changed before saving.'
   end
   return true

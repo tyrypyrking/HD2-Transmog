@@ -18,13 +18,26 @@ def test_installable_package_and_luajit_discovery_entry():
     with zipfile.ZipFile(package) as z:
         assert set(z.namelist()) == {
             'manifest.json','README.txt','THIRD-PARTY-LICENSES.txt','mod-icon.png','Addon/9ba626afa44a3aa3.patch_0',
-            'Addon/9ba626afa44a3aa3.patch_0.stream','Addon/9ba626afa44a3aa3.patch_0.gpu_resources'}
+            'Addon/9ba626afa44a3aa3.patch_0.stream','Addon/9ba626afa44a3aa3.patch_0.gpu_resources',
+            'LookStats/9ba626afa44a3aa3.patch_0','LookStats/9ba626afa44a3aa3.patch_0.stream',
+            'LookStats/9ba626afa44a3aa3.patch_0.gpu_resources'}
         assert b'0.1.2-debug' in z.read('README.txt')
         manifest=json.loads(z.read('manifest.json'))
         assert manifest['IconPath']=='mod-icon.png'
         assert z.read(manifest['IconPath'])==(ROOT/'assets/mod-icon.png').read_bytes()
         assert manifest['Guid']=='46b51e90-d243-457a-ae92-8d7e6875c0ea'
-        assert manifest['Options'][0]['Include']==['Addon']
+        assert manifest['Options'][0]['Include']==[]
+        assert manifest['Options'][0]['Image']==manifest['IconPath']
+        modes=manifest['Options'][0]['SubOptions']
+        assert all(mode['Image']==manifest['IconPath'] for mode in modes)
+        assert [mode['Include'] for mode in modes]==[['Addon'],['LookStats']]
+        alternate=z.read('LookStats/9ba626afa44a3aa3.patch_0')
+        alt_entry=struct.unpack_from('<7Q6I',alternate,104)
+        assert alt_entry[0]==resource_hash('mods/hd2transmog/foundation')
+        alt_body=alternate[alt_entry[2]+8:alt_entry[2]+alt_entry[7]]
+        assert b'local STATS_FOLLOW_LOOK = true' in alt_body
+        assert subprocess.run(['luajit','-e','assert(loadstring(io.read("*a")))'],
+                              input=alt_body,capture_output=True).returncode==0
         archive=z.read('Addon/9ba626afa44a3aa3.patch_0')
     magic,version,count=struct.unpack_from('<III',archive)
     assert (magic,version,count)==(0xf0000011,1,1)
@@ -38,6 +51,11 @@ def test_installable_package_and_luajit_discovery_entry():
     body=archive[offset+8:offset+length]
     assert body.startswith(b'-- HD2-Addon: mods/hd2transmog/foundation\n')
     assert body== (ROOT/'dist/hd2_transmog.lua').read_bytes()
+    assert b'local STATS_FOLLOW_LOOK = false' in body
+    import re
+    normalize=lambda source: re.sub(rb"build='[0-9a-f]{16}'", b"build='test'", source)
+    assert normalize(alt_body)==normalize(body.replace(b'local STATS_FOLLOW_LOOK = false',
+                                                       b'local STATS_FOLLOW_LOOK = true',1))
     parser=['luajit','-e','assert(loadstring(io.read("*a")))']
     assert subprocess.run(parser,input=body,capture_output=True).returncode==0
     # Prove the syntax check catches Lua 5.3-only operators.

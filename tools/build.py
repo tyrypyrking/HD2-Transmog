@@ -20,7 +20,7 @@ DESCRIPTION = ('Owned armor variants with independent appearance, base stats and
                'Native stat/perk previews and one-button equipment in the Armor list. '
                'Create saves locally without equipping the armor.')
 
-def bundle():
+def bundle(stats_follow_look=False):
     chunks = ['-- HD2-Addon: ' + NAME + '\n']
     for variable, filename in [('Diagnostics','diagnostics.lua'), ('State','state.lua'), ('EquippedState','equipped_state.lua'), ('ControllerInput','controller_input.lua'), ('Platform','platform.lua'),
                                ('AppearanceRegistry','appearance_registry.lua'),
@@ -66,6 +66,8 @@ def bundle():
         chunks.append('local '+variable+' = (function()\n'+(ROOT/'src'/filename).read_text()+'\nend)()\n')
     chunks.append((ROOT/'src/main.lua').read_text())
     source=''.join(chunks)
+    if stats_follow_look:
+        source=source.replace('local STATS_FOLLOW_LOOK = false', 'local STATS_FOLLOW_LOOK = true', 1)
     build_id=hashlib.sha256(source.encode()).hexdigest()[:16]
     return source.replace("build='source'", "build='"+build_id+"'", 1)
 
@@ -88,11 +90,32 @@ def main():
     build_addon(NAME,source.encode(),GUID,package,TITLE)
     with zipfile.ZipFile(package) as z:
         files={n:z.read(n) for n in z.namelist()}
+    # Mutually exclusive suboptions: Arsenal enables the first on fresh import,
+    # even when its global 'enable all options' preference is enabled.
+    alternate = out/'transmog-look-stats.zip'
+    alternate_source = bundle(stats_follow_look=True)
+    subprocess.run(['luajit','-e','assert(loadstring(io.read("*a")))'],
+                   input=alternate_source,text=True,check=True)
+    build_addon(NAME,alternate_source.encode(),GUID,alternate,TITLE)
+    with zipfile.ZipFile(alternate) as z:
+        for name in z.namelist():
+            if name.startswith('Addon/'):
+                files[name.replace('Addon/', 'LookStats/', 1)]=z.read(name)
+    alternate.unlink()
     manifest=json.loads(files['manifest.json'])
     manifest['IconPath']='mod-icon.png'
     files['mod-icon.png']=(ROOT/'assets/mod-icon.png').read_bytes()
     manifest['Description']=DESCRIPTION
     manifest['Options'][0]['Description']=DESCRIPTION
+    manifest['Options'][0]['Image']='mod-icon.png'
+    manifest['Options'][0]['Include']=[]
+    manifest['Options'][0]['SubOptions']=[
+        {'Name':'Independent armor stats (default)',
+         'Description':'Create in three stages: look, base stats, passive.', 'Include':['Addon'], 'Image':'mod-icon.png'},
+        {'Name':'Disable armor stat selection',
+         'Description':'Create in two stages: look and passive. The chosen look supplies its base stats. Existing variants are unchanged.',
+         'Include':['LookStats'], 'Image':'mod-icon.png'},
+    ]
     files['manifest.json']=(json.dumps(manifest,indent=2)+'\n').encode()
     files['THIRD-PARTY-LICENSES.txt']=(ROOT/'vendor/LuaJIT-disassembler/COPYRIGHT').read_bytes()
     files['README.txt']=(
@@ -106,11 +129,16 @@ def main():
         'Remove variant in the ship Armory deletes the saved card without changing worn armor.\n'
         'Pre-mission Equipment uses the same saved-variant section without a + tile or creator.\n'
         'Select +, choose an owned look, base stats, then an owned passive, and Create.\n'
+        'Optional: in Arsenal Options select Disable armor stat selection, deploy with the game closed, then restart.\n'
+        'This uses two stages (look and passive); the look supplies base stats. Existing variants are unchanged.\n'
         'Base-stat choices exclude donor passive bonuses and are sorted by armor rating.\n'
         'Create saves locally and does not equip or change the worn armor.\n'
         'Select a saved card to preview its look in the original stat/perk panels.\n'
         'Click Apply or press and release controller A (XInput/Steam Input) on a ready selected armor.\n'
         '0.1.2-debug: diagnostic build with 1.5-second double-click equip and support for existing body armor in the helmet slot.\n'
+        'Discards stale grid observations before list reconstruction; logs native construction, retirement reasons and build duration.\n'
+        'Local user QA passed restoration, multiple variant creations and equipping; other players\' crashes remain unconfirmed.\n'
+        'Further headless/double-passive compatibility work is deferred pending a separate helmet-passive mod.\n'
         'Install as an update to Transmog; do not enable a second copy. Existing variants are retained.\n'
         'After reproducing an issue, send HD2Transmog.log, HD2Transmog.previous.log, BingusSharedLoader.log and Transmog/STATUS.txt.\n'
         'Logs are under %LOCALAPPDATA%/CowboyBingus/Helldivers2/Logs. No debug.enabled marker is needed.\n'

@@ -193,9 +193,9 @@ function M.new(bridge,policy)
  function self:status()
   if self.phase=='active'then
    local menu_ok,same=pcall(bridge.same_menu,ticket)
-   local owns_ok,is_owned=pcall(bridge.owns,ticket)
+   local owns_ok,is_owned,ownership_reason=pcall(bridge.owns,ticket)
    if(menu_ok and same==false)or(menu_ok and same==true and owns_ok and is_owned==false)then
-    self.phase='retired';self.failure=same==false and 'native menu retired'or 'native model generation changed'
+    self.phase='retired';self.failure=same==false and 'native menu retired'or ownership_reason or 'native model generation changed'
     release_capture()
    elseif not menu_ok or not owns_ok then
     return {phase=self.phase,error='native presentation status unreadable',readable=false,menu_token=token}

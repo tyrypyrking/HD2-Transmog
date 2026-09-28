@@ -60,8 +60,8 @@ local WizardPanel={new=function()return {
  clear=function()end,draw=function()wizard_draws=wizard_draws+1;return true end,
  hit=function()return panel_target end,capture=function()return panel_target~=nil end,
  handle=function()return false end,input_policy=function()return {}end}end}
-local VariantWizard={display_name=RealWizard.display_name,new=function(api)
- local wizard=RealWizard.new(api);local action=wizard.action
+local VariantWizard={display_name=RealWizard.display_name,new=function(api,policy)
+ local wizard=RealWizard.new(api,policy);local action=wizard.action
  wizard.action=function(self,domain,context,value)
   if value and value.type=='cancel'then cancel_count=cancel_count+1 end
   return action(self,domain,context,value)
@@ -153,8 +153,10 @@ end
 '''
 
 
-def run(body, *, automatic=False, setup=''):
+def run(body, *, automatic=False, setup='', stats_follow_look=False):
     main=(ROOT/'src/main.lua').read_text()
+    if stats_follow_look:
+        main=main.replace('local STATS_FOLLOW_LOOK = false', 'local STATS_FOLLOW_LOOK = true', 1)
     script=HARNESS+'\nlocal function boot()\n'+main+'''
 end
 local runtime=boot();assert(runtime.status~='startup_failed',runtime.status)
@@ -253,3 +255,23 @@ assert(command('sound_reference','off') and not runtime.sound_reference)
 assert(command('open_creator') and flow:view().open)
 assert(save_count==0 and logged_count('runtime.error=')==0)
 ''')
+
+
+def test_optional_two_stage_mode_is_wired_through_main_and_persists_native_stats():
+    run(r'''
+assert(command('open_creator'))
+assert(host.stats_follow_look==true and flow:view().step_count==2)
+assert(flow:action{type='select_look',id='look-b'})
+assert(flow:view().step_number==2 and flow:view().selection.stats_id=='stats-b')
+assert(not flow:action{type='select_stats',id='base:50/550/125'})
+assert(flow:action{type='select_passive',id='perk-a'})
+panel_target={type='create'};input.down=true;advance();input.down=false;advance()
+assert(save_count==1 and not flow:view().open)
+local payload=files['transmog.state']:match('^HD2TRANSMOG_UI\t1\nappearance\n(.*)$')
+local saved=assert(State.decode(payload))
+assert(saved.presets['Custom Variant 1'].appearance_id=='look-b')
+assert(saved.presets['Custom Variant 1'].stats_id=='stats-b')
+assert(saved.presets['Custom Variant 1'].passive_variant_id=='perk-a')
+assert(saved.presets.Existing.stats_id=='stats-a')
+assert(logged_count('runtime.error=')==0)
+''', stats_follow_look=True)
